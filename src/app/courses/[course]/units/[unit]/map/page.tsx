@@ -1,8 +1,10 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import MapPage from "@/components/map/MapPage";
+import MapEditor from "@/components/mapeditor/MapEditor";
+import MapPrint from "@/components/mapeditor/MapPrint";
 import { findUnit, loadContent } from "@/lib/content/loader";
-import { buildMap } from "@/lib/map";
+import { readMap } from "@/lib/content/mapfile";
+import { ruleMastery } from "@/lib/map";
+import { notesForMap } from "@/lib/mapnotes";
 import { listParam } from "@/lib/testing";
 
 export const dynamic = "force-dynamic";
@@ -13,14 +15,21 @@ export default async function UnitMapPage({ params, searchParams }: PageProps<"/
   const found = findUnit(loadContent(), courseSlug, unitSlug);
   if (!found) notFound();
   const { course, unit } = found;
-  const focus = typeof sp.focus === "string" ? `rule:${sp.focus}` : undefined;
+  const { map, problems } = readMap(course.slug, unit.slug);
+  if (sp.print === "fit" || sp.print === "tile") return <MapPrint file={map} mode={sp.print} title={`${unit.title} map`} />;
   return (
-    <MapPage
-      data={buildMap(course, unit)}
+    <MapEditor
+      courseSlug={course.slug}
+      unitSlug={unit.slug}
       title={unit.title}
+      initial={map}
+      problems={problems}
+      notes={notesForMap(course, unit)}
+      mastery={ruleMastery(course)}
       highlightTopics={listParam(sp.highlight)}
-      focus={focus}
-      crumbs={<><Link href="/" className="underline">Courses</Link> / <Link href={`/courses/${course.slug}`} className="underline">{course.title}</Link> / <Link href={`/courses/${course.slug}/units/${unit.slug}`} className="underline">{unit.title}</Link> · <Link href={`/courses/${course.slug}/map`} className="underline">whole course</Link></>}
+      focusNote={typeof sp.focus === "string" ? sp.focus : undefined}
+      backHref={`/courses/${course.slug}/units/${unit.slug}`}
+      printHref={`/courses/${course.slug}/units/${unit.slug}/map`}
     />
   );
 }

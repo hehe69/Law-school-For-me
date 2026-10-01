@@ -58,8 +58,8 @@ writes a fresh backup if the newest one is more than a day old (see
 
 Next.js 16 (App Router) + TypeScript, Tailwind for minimal styling,
 `better-sqlite3` for attempts, `gray-matter` for note frontmatter,
-`react-markdown` for note bodies, `fflate` for backups, `cytoscape` with
-`cytoscape-dagre` and `cytoscape-svg` for the maps. Everything is installed
+`react-markdown` for note bodies, `fflate` for backups, `@xyflow/react` (React
+Flow) and `html-to-image` for the map editor. Everything is installed
 from npm; nothing loads from a CDN.
 
 ## Content layout
@@ -577,32 +577,130 @@ a week of the exam the line turns red.
 
 ## Maps
 
-**Map** (home, course, and unit pages) draws a pan-and-zoom graph with
-cytoscape. Nodes: the unit, each rule note, each element, each exception, the
-Wisconsin variation when present, each case note, each class note, and each
-syllabus topic. Edges: unit → rule, rule → element, rule (or the element it
-defeats) → exception, rule (or the element it changes) → Wisconsin, case →
-rule it applies, class note → rule it modifies, rule → related rule, unit →
-topic. Rule trees run top-down; the course map groups them under each unit.
-Notes with no links float in a "not yet linked" column on the right so you can
-see what to link.
+**Map** (home, course, and unit pages) opens a concept-map editor: a canvas you
+build by hand, one per unit and one per course. It is drawn with React Flow
+(installed from npm). Boxes have a kind, shape, colour, position, size, and a
+markdown definition; arrows have a kind, label, line style, and arrowheads;
+groups are container boxes around a set of boxes.
 
-Colour shows mastery of each rule and is inherited by its elements and
-exceptions: flashcard ease (1.3 → 0, 2.5 → 1) and one minus the miss rate of
-questions whose tags match the rule note's topics are averaged; ≥ 0.7 green,
-≥ 0.4 amber, below red, no data grey. Drafts are dashed. Syllabus topics with
-no notes are dashed red circles. The legend sits under the map.
+### The canvas
 
-Click a node to open its note or unit. Hover shows the rule statement, the
-element or exception text, a case's rule and holding, or a class note's
-professor's point. Filters: hide cases, hide class notes, only red and amber
-(hides green and grey rule trees and whatever hangs only off them), and a
-single-rule focus that collapses everything except that rule's tree and its
-neighbours; a focused rule gets an "Open rule tree" link. Export SVG and PNG
-download the current view.
+- **Add a box** from the "+ Add box" menu or by double-clicking empty canvas,
+  then pick a kind. The kind sets a default shape and colour you can change.
+  Kinds: rule, element, sub-element, exception, trigger, test, factor, case,
+  statute, amendment, free. Shapes: rectangle, rounded, diamond, circle,
+  hexagon, note-card. Colours: a palette of ten plus any hex.
+- **Move** by dragging, **resize** from the corners when selected,
+  **multi-select** with Shift or by dragging a marquee on empty canvas (pan with
+  the right or middle button, or scroll). The side panel offers align
+  (left, centre, right, top, middle, bottom) and distribute. Snap to a 16px
+  grid is a toggle.
+- **Draw an arrow** by dragging from one of the small handles on a box's edge
+  to another box, then pick its kind from the popup. Arrow kinds: contains,
+  triggers, requires, defeats, modifies, conflicts with, burden shifts to,
+  leads to, see also, plain. Each has a default label, style, and arrowheads;
+  all three can be overridden in the side panel when the arrow is selected.
+- **Group** selected boxes into a container; collapse it to a single box and
+  expand it again. A box can also be collapsed on its own: everything reached
+  through its "contains" arrows is hidden and a +N badge shows how many.
+- **Click a box** to open the side panel: label, kind, shape, colour, the
+  definition editor, the linked note with an open link, topics, the flashcard
+  opt-out, and its incoming and outgoing arrows. Hovering a box shows the
+  first line of its definition.
+- **Undo and redo** keep 100 steps (⌘Z, Shift+⌘Z or ⌘Y). Every change
+  autosaves about half a second after you stop; the top-right indicator reads
+  Saved, Unsaved changes, Saving, or the error.
+- Pan and zoom, **Fit**, and a minimap in the corner. The **search** box
+  highlights matching boxes and dims the rest.
+- Keyboard: Delete removes the selection, arrow keys nudge (Shift for a
+  bigger step), ⌘D duplicates, Escape deselects.
 
-The Gaps page links each course's uncovered topics to the map with those topics
-highlighted.
+### Pulling from notes
+
+The **Notes panel** (toggle in the toolbar) lists the unit's or course's rule,
+case, and class notes, with each rule's elements. Drag one onto the canvas, or
+click its + to place it at the centre. The box is created with the right kind
+and the note's text as its definition, and stays **linked** (🔗). With "Drop
+rules with their elements laid out beneath" ticked, a rule arrives with its
+elements in a row under it joined by "contains" arrows, and any exception tied
+to an element below that element with a "defeats" arrow. This is the old
+automatic layout.
+
+Linked boxes read their text from the note every time the map opens:
+
+- A linked **rule, case, or class** box shows the note's text read-only and has
+  a separate "My annotation" field that lives only in the map.
+- A linked **element** box's definition is editable and is written back to the
+  rule note as that element's definition. Rule notes gain an optional
+  per-element definition: an element may be written as `{ text, definition }`
+  instead of a plain string. Plain strings still load.
+
+The **Sync** tab lists notes and elements that have no box yet (drag them on)
+and boxes whose linked note is gone (shown with ⚠ and a dashed red border).
+
+### Mastery, flashcards, gaps
+
+- **Colour by mastery** recolours linked rule and element boxes green, amber,
+  red, or grey using the same calculation as before (flashcard ease blended
+  with the miss rate of questions tagged with the rule note's topics).
+- Any box with a definition and **no linked note is a flashcard** (front: the
+  label; back: the definition). Untick "Flashcard" in the side panel to opt a
+  box out. These cards sit in the daily review queue alongside note cards.
+- Boxes can carry **topics**. The Gaps page's "show on the map" link opens the
+  course map highlighting boxes tagged with the uncovered topics.
+- The **rule tree** is unchanged and still comes from the note, not the map.
+
+### Export and print
+
+Export PNG or SVG of the whole canvas or of the current selection. Print
+opens a read-only view in a new tab: "fit to page" scales the whole map onto
+one landscape page; "tiled at full size" draws it at 100% and lets the browser
+paginate.
+
+### Map file format
+
+`content/<course>/<unit>/map.json` for a unit map and
+`content/<course>/map.json` for the course map. Coordinates are absolute
+canvas pixels. The app writes the file; you can also edit it by hand, and
+anything it cannot read is dropped with a warning at the top of the editor.
+
+```json
+{
+  "version": 1,
+  "nodes": [
+    {
+      "id": "n-abc",
+      "kind": "rule",                 // rule | element | sub-element | exception | trigger | test
+                                      // | factor | case | statute | amendment | free
+      "label": "Adverse possession",
+      "shape": "rounded",             // rectangle | rounded | diamond | circle | hexagon | note-card
+      "colour": "blue",               // white grey red orange yellow green teal blue purple pink, or "#rrggbb"
+      "x": 120, "y": 80, "width": 220, "height": 70,
+      "definition": "markdown text",
+      "linkedNote": "adverse-possession/notes/elements.md",   // optional, content-relative note path
+      "linkedElement": 2,             // optional, 1-based element in that note
+      "collapsed": false,
+      "annotation": "my note on a linked box",                 // optional
+      "topics": ["tacking"],          // optional
+      "flashcard": false              // optional; omit to allow
+    }
+  ],
+  "edges": [
+    {
+      "id": "e-xyz", "from": "n-abc", "to": "n-def",
+      "kind": "contains",             // contains | triggers | requires | defeats | modifies | conflicts with
+                                      // | burden shifts to | leads to | see also | plain
+      "label": "optional override",
+      "style": "solid",               // solid | dashed | dotted
+      "arrowheads": "one"             // one | both | none
+    }
+  ],
+  "groups": [
+    { "id": "g-1", "label": "Elements", "colour": "grey", "members": ["n-def"],
+      "collapsed": false, "x": 80, "y": 160, "width": 600, "height": 240 }
+  ]
+}
+```
 
 ## Rule tree
 
@@ -823,8 +921,13 @@ The **Gaps** page lists, per course:
   with no topics gets flashcard ease only, or grey.
 - **Elements and exceptions inherit their rule's colour**, as asked; they have
   no data of their own.
-- **The map is laid out in the browser** (dagre), with unlinked notes placed
-  by hand to the right of the layout's bounding box.
+- **The map file is the source of truth for layout; notes are the source of
+  truth for linked text.** A linked box's definition in the file is only a
+  cache and is refreshed from the note on open.
+- **Undo is snapshot-based** (whole nodes and edges per step), which is simple
+  and plenty fast at the size of a course map.
+- **Duplicating a linked box drops the link**, so you never get two boxes
+  writing to the same element definition.
 - **The rule tree is HTML, not a graph**, because it has to print cleanly.
 - **The diagnostic counts the issue question inside the total**, so a request
   for N questions gives N questions. The unit that supplies it loses one
@@ -856,9 +959,11 @@ src/lib/testing.ts        shuffle and question-stripping for test runs
 src/lib/outline.ts        course outline builder and markdown export
 src/lib/exam.ts           exam countdown and units-per-week
 src/lib/diagnostic.ts     diagnostic sampling and report
-src/lib/map.ts            map nodes, edges, and mastery colours
+src/lib/map.ts            mastery colours for rule notes
+src/lib/content/mapfile.ts map.json schema, read, write
+src/lib/mapnotes.ts       the note list the map editor pulls from
 src/lib/settings.ts       data/settings.json (network access)
-src/components/map/       GraphView (cytoscape) and the map page shell
+src/components/mapeditor/ the React Flow editor: model, nodes, edges, panels, export, print
 src/app/files/            route that serves readings/ and images/
 scripts/dev.mjs           dev/start launcher: all interfaces, prints local IP
 src/lib/db.ts             SQLite connection + schema

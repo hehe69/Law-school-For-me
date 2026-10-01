@@ -23,6 +23,8 @@ export type RuleNote = {
   name: string;
   ruleStatement: string;
   elements: string[];
+  /** Parallel to elements: an optional definition for each element (edited from the map), or null */
+  elementDefinitions: (string | null)[];
   exceptions: string[];
   /** Parallel to exceptions: 1-based index of the element each exception defeats, or null */
   exceptionElements: (number | null)[];

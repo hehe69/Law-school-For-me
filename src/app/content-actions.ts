@@ -128,6 +128,17 @@ export async function saveNoteAction(prev: NoteFormState, formData: FormData): P
     }
   }
   if (type === "rule") {
+    // Keep per-element definitions (edited from the map) when the element text is unchanged.
+    if (existingSlug) {
+      const prev = readRawNote(courseSlug, unitSlug, existingSlug);
+      const prevDefs = new Map<string, string>();
+      for (const e of (Array.isArray(prev?.data.elements) ? prev!.data.elements : []) as unknown[]) {
+        if (typeof e === "object" && e !== null && typeof (e as { text?: unknown }).text === "string" && typeof (e as { definition?: unknown }).definition === "string") {
+          prevDefs.set((e as { text: string }).text, (e as { definition: string }).definition);
+        }
+      }
+      data.elements = (data.elements as string[]).map((t) => (prevDefs.has(t) ? { text: t, definition: prevDefs.get(t) } : t));
+    }
     // Exceptions typed as "@2 text" defeat element 2; stored as { text, element } so plain strings keep working.
     const lines = data.exceptions as string[];
     data.exceptions = lines.map((line) => {

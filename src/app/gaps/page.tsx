@@ -37,7 +37,7 @@ export default function GapsPage() {
             Syllabus topics with no notes <span className="font-normal text-gray-500">({uncoveredTopics.length})</span>
             {uncoveredTopics.length > 0 && (
               <Link href={`/courses/${course.slug}/map?highlight=${encodeURIComponent([...new Set(uncoveredTopics.map((t) => t.topic))].join(","))}`} className="ml-3 text-sm font-normal text-blue-700 underline">
-                show on the map
+                show on the course map
               </Link>
             )}
           </h3>
@@ -48,7 +48,8 @@ export default function GapsPage() {
               {uncoveredTopics.map(({ unit, topic }) => (
                 <li key={`${unit.slug}/${topic}`}>
                   <span className="font-medium">{topic}</span> <span className="text-gray-500">in</span>{" "}
-                  <UnitLink courseSlug={course.slug} unit={unit} />
+                  <UnitLink courseSlug={course.slug} unit={unit} />{" "}
+                  <Link href={`/courses/${course.slug}/units/${unit.slug}/map?highlight=${encodeURIComponent(topic)}`} className="text-xs text-blue-700 underline">unit map</Link>
                 </li>
               ))}
             </ul>

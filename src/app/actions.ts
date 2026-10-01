@@ -4,10 +4,10 @@
 // Grades against the content on disk and stores the attempt in SQLite.
 
 import { redirect } from "next/navigation";
-import { findCourse, findNoteByPath, findQuestion, isScope, loadContent } from "@/lib/content/loader";
+import { findCourse, findQuestion, isScope, loadContent } from "@/lib/content/loader";
 import { buildReport } from "@/lib/diagnostic";
 import { getAttempt, gradeIssues, insertAttempt, setDiagnosticReport, type IssueResult, type IssueResultEntry, type NewAttemptQuestion } from "@/lib/attempts";
-import { cardFromNote } from "@/lib/cards";
+import { cardByKey } from "@/lib/cards";
 import { rateCard } from "@/lib/reviews";
 import { isRating } from "@/lib/sm2";
 
@@ -88,10 +88,8 @@ export async function rateCardAction(formData: FormData): Promise<void> {
   const rating = Number(formData.get("rating"));
   const course = String(formData.get("course") ?? "");
   if (!isRating(rating)) throw new Error("rating must be 1-4");
-  const found = findNoteByPath(loadContent(), cardKey);
-  if (!found) throw new Error(`card ${cardKey} no longer exists in content`);
-  const card = cardFromNote(found.course, found.unit, found.note);
-  if (!card) throw new Error(`note ${cardKey} is not a flashcard type`);
+  const card = cardByKey(loadContent(), cardKey);
+  if (!card) throw new Error(`card ${cardKey} no longer exists in content`);
   rateCard(card, rating);
   redirect(course ? `/review?course=${encodeURIComponent(course)}` : "/review");
 }

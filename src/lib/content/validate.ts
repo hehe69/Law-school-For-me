@@ -44,20 +44,6 @@ function optString(obj: Record<string, unknown>, key: string, problems: Problems
   return v;
 }
 
-/** A list field that may be missing (draft) but, when present, must be a list of strings. [] counts as present. */
-function optStringList(obj: Record<string, unknown>, key: string, problems: Problems, missing: string[]): string[] {
-  const v = obj[key];
-  if (v === undefined || v === null) {
-    missing.push(key);
-    return [];
-  }
-  if (!Array.isArray(v) || !v.every((x) => typeof x === "string")) {
-    problems.push(`"${key}" must be a list of strings (use [] for none)`);
-    return [];
-  }
-  return v;
-}
-
 export const NOTE_FIELDS: Record<NoteFrontmatter["type"], string[]> = {
   case: ["name", "facts", "issue", "rule", "holding", "whyItMatters"],
   rule: ["name", "ruleStatement", "elements", "exceptions", "wisconsinVariation"],
@@ -94,6 +80,26 @@ export function parseFrontmatter(
   }
 
   if (type === "rule") {
+    // Elements may be plain strings or { text, definition } objects.
+    const elements: string[] = [];
+    const elementDefinitions: (string | null)[] = [];
+    if (raw.elements === undefined || raw.elements === null) {
+      missing.push("elements");
+    } else if (!Array.isArray(raw.elements)) {
+      problems.push(`"elements" must be a list (use [] for none)`);
+    } else {
+      raw.elements.forEach((e, i) => {
+        if (typeof e === "string") {
+          elements.push(e);
+          elementDefinitions.push(null);
+        } else if (isRecord(e) && typeof e.text === "string") {
+          elements.push(e.text);
+          elementDefinitions.push(typeof e.definition === "string" && e.definition.trim() ? e.definition : null);
+        } else {
+          problems.push(`elements[${i}] must be text or { text, definition }`);
+        }
+      });
+    }
     // Exceptions may be plain strings or { text, element } objects naming the 1-based element they defeat.
     const exceptions: string[] = [];
     const exceptionElements: (number | null)[] = [];
@@ -128,7 +134,8 @@ export function parseFrontmatter(
       type: "rule",
       name: optString(raw, "name", problems, missing),
       ruleStatement: optString(raw, "ruleStatement", problems, missing),
-      elements: optStringList(raw, "elements", problems, missing),
+      elements,
+      elementDefinitions,
       exceptions,
       exceptionElements,
       wisconsinVariation: optString(raw, "wisconsinVariation", problems, missing),
