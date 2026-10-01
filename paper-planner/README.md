@@ -24,6 +24,11 @@ Open http://localhost:3000. The first start creates `data/planner.db`, applies t
 migrations, seeds one placeholder paper so every page shows something, and writes
 a backup.
 
+On a Mac you can also double-click `scripts/launch-mac.command`. It installs
+dependencies on first run, starts the server, and opens the browser. Copy it (or
+an alias of it) to the Desktop for a one-click launcher; close its Terminal
+window to stop the app.
+
 - `npm run build && npm start` runs the production build.
 - `npm run lint` runs ESLint; `npm run typecheck` runs `tsc`.
 - `npm run seed` re-creates the placeholder paper (the dev server must be running;
