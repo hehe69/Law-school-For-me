@@ -86,17 +86,54 @@ export function parseFrontmatter(
       holding: optString(raw, "holding", problems, missing),
       whyItMatters: optString(raw, "whyItMatters", problems, missing),
     };
+    if (raw.appliesRule !== undefined && raw.appliesRule !== null && raw.appliesRule !== "") {
+      if (typeof raw.appliesRule !== "string") problems.push(`"appliesRule" must be a rule note path like "unit/notes/file.md"`);
+      else value.appliesRule = raw.appliesRule;
+    }
     return problems.length ? { ok: false, problems } : { ok: true, value, missing };
   }
 
   if (type === "rule") {
+    // Exceptions may be plain strings or { text, element } objects naming the 1-based element they defeat.
+    const exceptions: string[] = [];
+    const exceptionElements: (number | null)[] = [];
+    if (raw.exceptions === undefined || raw.exceptions === null) {
+      missing.push("exceptions");
+    } else if (!Array.isArray(raw.exceptions)) {
+      problems.push(`"exceptions" must be a list (use [] for none)`);
+    } else {
+      raw.exceptions.forEach((e, i) => {
+        if (typeof e === "string") {
+          exceptions.push(e);
+          exceptionElements.push(null);
+        } else if (isRecord(e) && typeof e.text === "string") {
+          exceptions.push(e.text);
+          exceptionElements.push(Number.isInteger(e.element) && (e.element as number) >= 1 ? (e.element as number) : null);
+        } else {
+          problems.push(`exceptions[${i}] must be text or { text, element }`);
+        }
+      });
+    }
+    let wisconsinElement: number | null = null;
+    if (raw.wisconsinElement !== undefined && raw.wisconsinElement !== null && raw.wisconsinElement !== "") {
+      if (!Number.isInteger(raw.wisconsinElement) || (raw.wisconsinElement as number) < 1) problems.push(`"wisconsinElement" must be a 1-based element number`);
+      else wisconsinElement = raw.wisconsinElement as number;
+    }
+    let relatedRules: string[] = [];
+    if (raw.relatedRules !== undefined && raw.relatedRules !== null) {
+      if (!Array.isArray(raw.relatedRules) || !raw.relatedRules.every((x) => typeof x === "string")) problems.push(`"relatedRules" must be a list of rule note paths`);
+      else relatedRules = (raw.relatedRules as string[]).filter((r) => r.trim());
+    }
     const value: NoteFrontmatter = {
       type: "rule",
       name: optString(raw, "name", problems, missing),
       ruleStatement: optString(raw, "ruleStatement", problems, missing),
       elements: optStringList(raw, "elements", problems, missing),
-      exceptions: optStringList(raw, "exceptions", problems, missing),
+      exceptions,
+      exceptionElements,
       wisconsinVariation: optString(raw, "wisconsinVariation", problems, missing),
+      wisconsinElement,
+      relatedRules,
     };
     return problems.length ? { ok: false, problems } : { ok: true, value, missing };
   }

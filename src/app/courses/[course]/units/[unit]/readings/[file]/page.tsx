@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import NoteCard from "@/components/notes/NoteCard";
-import { fileUrl, findUnit, loadContent } from "@/lib/content/loader";
+import { fileUrl, findUnit, loadContent, noteLinks } from "@/lib/content/loader";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +39,7 @@ export default async function ReadingPage({ params }: PageProps<"/courses/[cours
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">Notes · {unit.title}</h2>
           {unit.notes.length === 0 && <p className="text-sm text-gray-600">No notes in this unit yet.</p>}
           {unit.notes.map((n) => (
-            <NoteCard key={n.slug} note={n} editHref={`${base}/notes/${n.slug}/edit`} />
+            <NoteCard key={n.slug} note={n} editHref={`${base}/notes/${n.slug}/edit`} links={noteLinks(course, n)} treeHref={n.frontmatter.type === "rule" ? `${base}/notes/${n.slug}/tree` : undefined} />
           ))}
         </div>
       </div>

@@ -31,6 +31,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
         <Link href={`/courses/${course.slug}/weak-tags`} className="text-blue-700 underline">Weak tags</Link>
         <Link href={`/review?course=${course.slug}`} className="text-blue-700 underline">Review cards</Link>
         <Link href={`/courses/${course.slug}/outline`} className="text-blue-700 underline">Outline</Link>
+        <Link href={`/courses/${course.slug}/map`} className="text-blue-700 underline">Map</Link>
       </div>
 
       <form action={setExamDateAction} className="mb-6 flex flex-wrap items-center gap-2 rounded border border-gray-200 bg-gray-50 p-3 text-sm">

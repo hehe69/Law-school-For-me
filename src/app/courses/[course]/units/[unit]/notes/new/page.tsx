@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import NoteForm from "@/components/notes/NoteForm";
-import { findUnit, loadContent } from "@/lib/content/loader";
+import { findUnit, loadContent, ruleNoteOptions } from "@/lib/content/loader";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +24,7 @@ export default async function NewNotePage({ params }: PageProps<"/courses/[cours
         unitSlug={unit.slug}
         syllabusTopics={unit.syllabusTopics}
         existingSlugs={unit.notes.map((n) => n.slug)}
+        ruleNotes={ruleNoteOptions(course).map((r) => ({ ref: r.ref, label: r.label }))}
       />
     </div>
   );

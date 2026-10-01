@@ -35,6 +35,11 @@ export default function GapsPage() {
 
           <h3 className="mb-1 font-semibold">
             Syllabus topics with no notes <span className="font-normal text-gray-500">({uncoveredTopics.length})</span>
+            {uncoveredTopics.length > 0 && (
+              <Link href={`/courses/${course.slug}/map?highlight=${encodeURIComponent([...new Set(uncoveredTopics.map((t) => t.topic))].join(","))}`} className="ml-3 text-sm font-normal text-blue-700 underline">
+                show on the map
+              </Link>
+            )}
           </h3>
           {uncoveredTopics.length === 0 ? (
             <p className="mb-4 text-sm text-gray-600">Every syllabus topic has at least one note.</p>

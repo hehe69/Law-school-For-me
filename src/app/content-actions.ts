@@ -12,10 +12,11 @@ import {
   courseExists, createCourse, createUnit, isSlug, noteExists, readRawNote, readRawQuestions, saveUnitFile, slugify,
   unitFolderExists, updateCourseJson, updateRawQuestion, updateUnitJson, writeNote, writeQuestions,
 } from "@/lib/content/writer";
-import { findCourse, findRuleNote } from "@/lib/content/loader";
+import { findCourse, findRuleNote, ruleNoteOptions } from "@/lib/content/loader";
 import { normaliseRuleNoteRef } from "@/lib/content/validate";
 import { buildOutline, OUTLINE_DIR, outlineMarkdown } from "@/lib/outline";
 import { toDateString } from "@/lib/sm2";
+import { writeSettings } from "@/lib/settings";
 import fs from "node:fs";
 import path from "node:path";
 import type { NoteType } from "@/lib/content/types";
@@ -112,6 +113,35 @@ export async function saveNoteAction(prev: NoteFormState, formData: FormData): P
     const raw = text(formData, key);
     data[key] = LIST_FIELDS.has(key) ? linesToList(raw) : raw.trim();
   }
+  // Links between notes (all optional; see README "Linking notes").
+  const ruleRefs = new Set(ruleNoteOptions(found.course).map((r) => r.ref));
+  if (type === "case") {
+    const applies = String(formData.get("appliesRule") ?? "").trim();
+    if (applies && !ruleRefs.has(applies)) return { error: `appliesRule "${applies}" is not a rule note in this course` };
+    if (applies) data.appliesRule = applies;
+  }
+  if (type === "class") {
+    const pick = String(formData.get("modifiesRuleSelect") ?? "");
+    if (pick && pick !== "__text__") {
+      if (!ruleRefs.has(pick)) return { error: `modifiesRule "${pick}" is not a rule note in this course` };
+      data.modifiesRule = pick;
+    }
+  }
+  if (type === "rule") {
+    // Exceptions typed as "@2 text" defeat element 2; stored as { text, element } so plain strings keep working.
+    const lines = data.exceptions as string[];
+    data.exceptions = lines.map((line) => {
+      const m = /^@(\d+)\s+(.*)$/.exec(line);
+      return m ? { text: m[2].trim(), element: Number(m[1]) } : line;
+    });
+    const we = Number(formData.get("wisconsinElement"));
+    if (Number.isInteger(we) && we >= 1) data.wisconsinElement = we;
+    else delete data.wisconsinElement;
+    const related = formData.getAll("relatedRules").map((r) => String(r).trim()).filter(Boolean);
+    for (const r of related) if (!ruleRefs.has(r)) return { error: `relatedRules "${r}" is not a rule note in this course` };
+    if (related.length) data.relatedRules = related;
+    else delete data.relatedRules;
+  }
   const topics = formData.getAll("topics").map((t) => String(t).trim()).filter(Boolean);
   const syllabus = new Set(found.unit.syllabusTopics);
   if (topics.some((t) => !syllabus.has(t))) return { error: "topics must come from the unit's syllabus topics" };
@@ -129,7 +159,8 @@ export async function saveNoteAction(prev: NoteFormState, formData: FormData): P
     // Keep any keys the user wrote by hand that the form does not know about.
     const raw = readRawNote(courseSlug, unitSlug, slug);
     if (raw) {
-      for (const [k, v] of Object.entries(raw.data)) if (!(k in data)) data[k] = v;
+      const formOwned = new Set(["appliesRule", "relatedRules", "wisconsinElement"]);
+      for (const [k, v] of Object.entries(raw.data)) if (!(k in data) && !formOwned.has(k)) data[k] = v;
     }
   } else {
     const nameSource = type === "class" ? `${data.date ?? ""} ${data.topic ?? ""}` : String(data.name ?? "");
@@ -423,4 +454,11 @@ export async function setExamDateAction(formData: FormData): Promise<void> {
   if (raw && !/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new Error("exam date must be YYYY-MM-DD");
   updateCourseJson(courseSlug, { examDate: raw || undefined });
   redirect(`/courses/${courseSlug}`);
+}
+
+// ---------- Settings
+
+export async function setNetworkAccessAction(formData: FormData): Promise<void> {
+  writeSettings({ networkAccess: formData.get("networkAccess") === "on" });
+  redirect("/?settings=saved");
 }

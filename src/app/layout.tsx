@@ -14,7 +14,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full flex flex-col font-sans">
-        <header className="border-b border-gray-200">
+        <header className="border-b border-gray-200 print:hidden">
           <div className="mx-auto flex max-w-4xl items-center gap-5 px-4 py-3">
             <Link href="/" className="font-semibold">Law Study</Link>
             <nav className="flex gap-4 text-sm text-gray-700">

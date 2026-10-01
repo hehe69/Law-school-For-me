@@ -14,6 +14,8 @@ export type CaseNote = {
   rule: string;
   holding: string;
   whyItMatters: string;
+  /** Optional reference to the rule note this case applies: "<unit>/notes/<file>.md" */
+  appliesRule?: string;
 };
 
 export type RuleNote = {
@@ -22,7 +24,13 @@ export type RuleNote = {
   ruleStatement: string;
   elements: string[];
   exceptions: string[];
+  /** Parallel to exceptions: 1-based index of the element each exception defeats, or null */
+  exceptionElements: (number | null)[];
   wisconsinVariation: string;
+  /** 1-based index of the element the Wisconsin variation changes, or null */
+  wisconsinElement: number | null;
+  /** Optional references to related rule notes */
+  relatedRules: string[];
 };
 
 export type ClassNote = {
@@ -30,6 +38,7 @@ export type ClassNote = {
   date: string; // YYYY-MM-DD
   topic: string;
   professorPoint: string;
+  /** A rule note reference ("<unit>/notes/<file>.md") or, in older notes, free text */
   modifiesRule: string;
 };
 

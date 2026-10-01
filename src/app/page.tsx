@@ -5,7 +5,8 @@ import { unitStatsMap } from "@/lib/attempts";
 import { dueByCourse } from "@/lib/reviews";
 import { formatDate } from "@/lib/format";
 import { lastBackup } from "@/lib/backup";
-import { backupAction } from "@/app/content-actions";
+import { backupAction, setNetworkAccessAction } from "@/app/content-actions";
+import { readSettings } from "@/lib/settings";
 import UnitTable from "@/components/UnitTable";
 import { examPlan } from "@/lib/exam";
 
@@ -18,6 +19,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const due = dueByCourse(tree);
   const totalDue = [...due.values()].reduce((n, d) => n + d.due, 0);
   const last = lastBackup();
+  const settings = readSettings();
 
   return (
     <div>
@@ -31,6 +33,18 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
           <button type="submit" className="rounded border border-gray-300 px-3 py-1">Back up now</button>
         </form>
       </div>
+
+      <form action={setNetworkAccessAction} className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+        <label className="flex items-center gap-2">
+          <input type="checkbox" name="networkAccess" defaultChecked={settings.networkAccess} />
+          Allow other devices on my wifi to open this app
+        </label>
+        <button type="submit" className="rounded border border-gray-300 px-3 py-1">Save</button>
+        <span className="text-gray-500">
+          Currently {settings.networkAccess ? "on: listening on all interfaces" : "off: this computer only"}. Takes effect the next time you start the app.
+        </span>
+        {sp.settings === "saved" && <span className="text-green-700">Saved. Restart the app to apply.</span>}
+      </form>
 
       {sp.backup === "ok" && typeof sp.file === "string" && (
         <p className="mb-4 rounded border border-green-300 bg-green-50 p-3 text-sm text-green-900">
@@ -84,6 +98,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             <Link href={`/courses/${course.slug}/units/new`} className="text-sm font-normal text-blue-700 underline">New unit</Link>
             <Link href={`/courses/${course.slug}/weak-tags`} className="text-sm font-normal text-blue-700 underline">Weak tags</Link>
             <Link href={`/courses/${course.slug}/outline`} className="text-sm font-normal text-blue-700 underline">Outline</Link>
+            <Link href={`/courses/${course.slug}/map`} className="text-sm font-normal text-blue-700 underline">Map</Link>
           </h2>
           {plan && (
             <p className={`mb-2 text-sm ${plan.daysRemaining >= 0 && plan.daysRemaining <= 7 ? "text-red-700" : "text-gray-700"}`}>

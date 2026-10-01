@@ -25,7 +25,7 @@ function loadReadings(unitDir: string): Reading[] {
 function loadImages(unitDir: string): string[] {
   return listFiles(path.join(unitDir, "images"), (n) => IMAGE_EXTENSIONS.has(path.extname(n).toLowerCase()));
 }
-import { parseFrontmatter, validateCourseJson, validateQuestion, validateTopics, validateUnitJson } from "./validate";
+import { normaliseRuleNoteRef, parseFrontmatter, validateCourseJson, validateQuestion, validateTopics, validateUnitJson } from "./validate";
 
 export const CONTENT_ROOT = path.join(process.cwd(), "content");
 
@@ -285,6 +285,30 @@ export function findRuleNote(course: Course, notePath: string): { unit: Unit; no
   return undefined;
 }
 
+/** Resolve a rule reference as written in a note ("unit/notes/file.md") to the rule note, if any. */
+export function resolveRuleRef(course: Course, ref: string | undefined | null): { unit: Unit; note: Note } | undefined {
+  if (!ref || !ref.trim()) return undefined;
+  return findRuleNote(course, normaliseRuleNoteRef(ref, course.slug));
+}
+
+/** Course-relative reference for a note, the form stored in appliesRule, modifiesRule, relatedRules, ruleNote. */
+export function noteRef(unit: Unit, note: Note): string {
+  return `${unit.slug}/notes/${note.slug}.md`;
+}
+
+/** Every rule note in a course with its reference and label, for pickers. */
+export function ruleNoteOptions(course: Course): { ref: string; label: string; path: string }[] {
+  return course.units.flatMap((u) =>
+    u.notes
+      .filter((n) => n.frontmatter.type === "rule")
+      .map((n) => ({
+        ref: noteRef(u, n),
+        path: n.path,
+        label: `${u.title}: ${(n.frontmatter.type === "rule" && n.frontmatter.name) || n.slug}${n.status === "draft" ? " (draft)" : ""}`,
+      })),
+  );
+}
+
 /** Look up a note by its content-relative path (the flashcard key). */
 export function findNoteByPath(tree: ContentTree, notePath: string): { course: Course; unit: Unit; note: Note } | undefined {
   for (const course of tree.courses) {
@@ -304,4 +328,18 @@ export function courseQuestions(course: Course): Question[] {
 /** Look up a question by its stored identity; undefined if it has since been removed from content. */
 export function findQuestion(tree: ContentTree, courseSlug: string, unitSlug: string, id: string): Question | undefined {
   return findUnit(tree, courseSlug, unitSlug)?.unit.questions.find((q) => q.id === id);
+}
+
+/** Resolved links for a note card: hrefs for refs that resolve, plain text otherwise. */
+export function noteLinks(course: Course, note: Note): { appliesRule?: { href: string; label: string } | { text: string }; modifiesRule?: { href: string; label: string } | { text: string }; relatedRules?: ({ href: string; label: string } | { text: string })[] } {
+  const toLink = (ref: string) => {
+    const r = resolveRuleRef(course, ref);
+    if (!r) return { text: ref };
+    const name = (r.note.frontmatter.type === "rule" && r.note.frontmatter.name) || r.note.slug;
+    return { href: `/courses/${course.slug}/units/${r.unit.slug}#note-${r.note.slug}`, label: name };
+  };
+  const fm = note.frontmatter;
+  if (fm.type === "case") return fm.appliesRule ? { appliesRule: toLink(fm.appliesRule) } : {};
+  if (fm.type === "class") return fm.modifiesRule ? { modifiesRule: toLink(fm.modifiesRule) } : {};
+  return fm.relatedRules.length ? { relatedRules: fm.relatedRules.map(toLink) } : {};
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ContentErrors from "@/components/ContentErrors";
 import NoteCard from "@/components/notes/NoteCard";
-import { activeQuestions, findUnit, loadContent } from "@/lib/content/loader";
+import { activeQuestions, findUnit, loadContent, noteLinks } from "@/lib/content/loader";
 import type { NoteType } from "@/lib/content/types";
 import EmphasisForm from "@/components/EmphasisForm";
 import ConfirmButton from "@/components/ConfirmButton";
@@ -84,6 +84,7 @@ export default async function UnitPage({ params, searchParams }: PageProps<"/cou
           <Link href={`${base}/notes/new`} className="rounded border border-gray-300 px-3 py-1">New note</Link>
           <Link href={`${base}/import`} className="rounded border border-gray-300 px-3 py-1">Import questions</Link>
           <Link href={`/courses/${course.slug}/weak-tags`} className="text-blue-700 underline">Weak tags</Link>
+          <Link href={`${base}/map`} className="text-blue-700 underline">Map</Link>
         </span>
         {recent.length > 0 && (
           <span className="text-sm text-gray-600">
@@ -114,7 +115,7 @@ export default async function UnitPage({ params, searchParams }: PageProps<"/cou
               {heading} <span className="text-base font-normal text-gray-500">({notes.length})</span>
             </h2>
             {notes.map((n) => (
-              <NoteCard key={n.slug} note={n} editHref={`${base}/notes/${n.slug}/edit`} />
+              <NoteCard key={n.slug} note={n} editHref={`${base}/notes/${n.slug}/edit`} links={noteLinks(course, n)} treeHref={n.frontmatter.type === "rule" ? `${base}/notes/${n.slug}/tree` : undefined} />
             ))}
           </section>
         );

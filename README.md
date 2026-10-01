@@ -17,20 +17,24 @@ npm run dev
 
 Open http://localhost:3000.
 
-`npm run dev` listens on every network interface and prints the addresses at
-start, for example:
+By default the app listens on this computer only. The home page has a
+setting, **Allow other devices on my wifi to open this app** (off by default,
+stored in `data/settings.json`). Turn it on, save, and restart; the launcher
+reads it at start and says which mode it is in:
 
 ```
-  Law Study (dev) listening on all interfaces, port 3000
+  Law Study (dev) · port 3000
   This computer:  http://localhost:3000
+  Network access: ON (listening on all interfaces; anyone on your local network can open it)
   Same wifi:      http://192.168.1.23:3000
 ```
 
-Open the "Same wifi" address on your phone or another machine on the same
-network. The app is reachable only on your local network (your router does not
-forward it to the internet), but anyone on that network can open it, and there
-is no login. If you run the app from your own launcher, have it call
-`npm run dev` (or `npm start`) so the same script runs.
+With it off the output says `Network access: OFF (localhost only; ...)`. When
+on, open the "Same wifi" address on your phone. The app is reachable only on
+your local network (your router does not forward it to the internet), but
+anyone on that network can open it, and there is no login. If you run the app
+from your own launcher, have it call `npm run dev` (or `npm start`) so the same
+script runs.
 
 - `npm run dev` re-reads `content/` on every request, so add or edit files and
   just reload the page. No restart needed.
@@ -54,7 +58,9 @@ writes a fresh backup if the newest one is more than a day old (see
 
 Next.js 16 (App Router) + TypeScript, Tailwind for minimal styling,
 `better-sqlite3` for attempts, `gray-matter` for note frontmatter,
-`react-markdown` for note bodies.
+`react-markdown` for note bodies, `fflate` for backups, `cytoscape` with
+`cytoscape-dagre` and `cytoscape-svg` for the maps. Everything is installed
+from npm; nothing loads from a CDN.
 
 ## Content layout
 
@@ -204,6 +210,37 @@ facts: |
 
   Second paragraph.
 ```
+
+### Linking notes
+
+Notes can point at rule notes. A reference is the rule note's path relative to
+the course folder, `<unit>/notes/<file>.md`, the same form issue questions use.
+
+- **case** notes: optional `appliesRule: "<ref>"`, the rule the case applies.
+- **class** notes: `modifiesRule` may be a reference. Free text still works, as
+  in older notes; the app treats it as a link only when it resolves.
+- **rule** notes: optional `relatedRules: ["<ref>", ...]`.
+
+Rule notes can also say which element an exception defeats and which element
+the Wisconsin variation changes, which the rule tree and map use:
+
+```yaml
+elements:
+  - "Actual possession"
+  - "Continuous for the statutory period"
+exceptions:
+  - "Government land is not subject to adverse possession"      # plain, not tied
+  - text: "Disabilities of the owner toll the statute"           # tied to element 2
+    element: 2
+wisconsinElement: 2
+```
+
+In the note form these are pickers: a rule dropdown for case and class notes
+(class notes keep a "Free text" option), checkboxes for related rules, and a
+dropdown for the Wisconsin element. An exception is tied to an element by
+starting its line with `@2 ` (element 2). References that do not resolve are
+shown as plain text with "(not a rule note)", never an error. Old files load
+unchanged.
 
 ### Add questions
 
@@ -512,6 +549,44 @@ remaining and, while some units have no test attempts, **units per week to
 finish**: units with no attempts divided by weeks remaining, rounded up. Within
 a week of the exam the line turns red.
 
+## Maps
+
+**Map** (home, course, and unit pages) draws a pan-and-zoom graph with
+cytoscape. Nodes: the unit, each rule note, each element, each exception, the
+Wisconsin variation when present, each case note, each class note, and each
+syllabus topic. Edges: unit → rule, rule → element, rule (or the element it
+defeats) → exception, rule (or the element it changes) → Wisconsin, case →
+rule it applies, class note → rule it modifies, rule → related rule, unit →
+topic. Rule trees run top-down; the course map groups them under each unit.
+Notes with no links float in a "not yet linked" column on the right so you can
+see what to link.
+
+Colour shows mastery of each rule and is inherited by its elements and
+exceptions: flashcard ease (1.3 → 0, 2.5 → 1) and one minus the miss rate of
+questions whose tags match the rule note's topics are averaged; ≥ 0.7 green,
+≥ 0.4 amber, below red, no data grey. Drafts are dashed. Syllabus topics with
+no notes are dashed red circles. The legend sits under the map.
+
+Click a node to open its note or unit. Hover shows the rule statement, the
+element or exception text, a case's rule and holding, or a class note's
+professor's point. Filters: hide cases, hide class notes, only red and amber
+(hides green and grey rule trees and whatever hangs only off them), and a
+single-rule focus that collapses everything except that rule's tree and its
+neighbours; a focused rule gets an "Open rule tree" link. Export SVG and PNG
+download the current view.
+
+The Gaps page links each course's uncovered topics to the map with those topics
+highlighted.
+
+## Rule tree
+
+Every rule note has a **Tree** button (note card, map focus) that shows the
+rule as a printable checklist: elements as numbered steps with a checkbox,
+exceptions under the element they defeat ("unless …"), and the Wisconsin
+variation beside the element it changes. Exceptions and a Wisconsin variation
+not tied to an element are listed at the bottom. The Print button uses the
+browser's print dialog; navigation is hidden on paper.
+
 ## Backups
 
 **Back up now** on the home page zips the whole `content/` folder and a
@@ -711,8 +786,20 @@ The **Gaps** page lists, per course:
   export, so the file always matches what you see.
 - **Units per week counts units with no attempts at all**, as asked, not
   units with a low score.
-- **Binding to all interfaces is on by default.** The README says what that
-  means; there is no auth, so this is a trade-off you make by running it.
+- **Network access is off by default** and lives in `data/settings.json`, a
+  plain file so the launcher can read it without the app running.
+- **Exceptions stay strings in the file unless tied to an element**, when they
+  become `{ text, element }`. Both forms load; the form writes whichever fits.
+- **An unresolved link is text, not an error.** A class note's `modifiesRule`
+  was free text before, and it still can be.
+- **Mastery uses topics as the bridge** between a rule note and questions:
+  question tags are matched to the note's `topics`, case-insensitively. A rule
+  with no topics gets flashcard ease only, or grey.
+- **Elements and exceptions inherit their rule's colour**, as asked; they have
+  no data of their own.
+- **The map is laid out in the browser** (dagre), with unlinked notes placed
+  by hand to the right of the layout's bounding box.
+- **The rule tree is HTML, not a graph**, because it has to print cleanly.
 
 ## Not built yet (schema left open)
 
@@ -734,6 +821,9 @@ src/instrumentation.ts    runs the stale-backup check at server start
 src/lib/testing.ts        shuffle and question-stripping for test runs
 src/lib/outline.ts        course outline builder and markdown export
 src/lib/exam.ts           exam countdown and units-per-week
+src/lib/map.ts            map nodes, edges, and mastery colours
+src/lib/settings.ts       data/settings.json (network access)
+src/components/map/       GraphView (cytoscape) and the map page shell
 src/app/files/            route that serves readings/ and images/
 scripts/dev.mjs           dev/start launcher: all interfaces, prints local IP
 src/lib/db.ts             SQLite connection + schema

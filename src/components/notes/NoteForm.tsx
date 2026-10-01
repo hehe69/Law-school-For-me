@@ -9,7 +9,8 @@ import type { Note, NoteType } from "@/lib/content/types";
 import { slugify } from "@/lib/slug";
 
 export type UnitOption = { slug: string; title: string; syllabusTopics: string[]; existingSlugs: string[] };
-export type CourseOption = { slug: string; title: string; units: UnitOption[] };
+export type RuleOption = { ref: string; label: string };
+export type CourseOption = { slug: string; title: string; units: UnitOption[]; ruleNotes: RuleOption[] };
 
 type Props = {
   courseSlug: string;
@@ -23,6 +24,8 @@ type Props = {
   pickers?: CourseOption[];
   /** Capture being filed: prefills the body and is marked filed on save */
   capture?: { id: number; text: string; createdOn: string };
+  /** Rule notes in the course for the link pickers (ignored when pickers are given; each course carries its own) */
+  ruleNotes?: RuleOption[];
 };
 
 type Fields = Record<string, string>;
@@ -40,7 +43,7 @@ const FIELD_DEFS: Record<NoteType, { key: string; label: string; kind: "text" | 
     { key: "name", label: "Rule name", kind: "text" },
     { key: "ruleStatement", label: "Rule statement", kind: "textarea" },
     { key: "elements", label: "Elements", kind: "lines", hint: "one per line" },
-    { key: "exceptions", label: "Exceptions", kind: "lines", hint: "one per line" },
+    { key: "exceptions", label: "Exceptions", kind: "lines", hint: "one per line; start a line with @N to tie it to element N" },
     { key: "wisconsinVariation", label: "Wisconsin variation", kind: "textarea" },
   ],
   class: [
@@ -53,11 +56,16 @@ const FIELD_DEFS: Record<NoteType, { key: string; label: string; kind: "text" | 
 
 function initialFields(note?: Note): Fields {
   if (!note) return {};
-  const fm = note.frontmatter as unknown as Record<string, unknown>;
+  const fm = note.frontmatter;
   const out: Fields = {};
-  for (const [k, v] of Object.entries(fm)) {
-    if (k === "type") continue;
+  for (const [k, v] of Object.entries(fm as unknown as Record<string, unknown>)) {
+    if (k === "type" || k === "exceptionElements" || k === "relatedRules" || k === "wisconsinElement") continue;
     out[k] = Array.isArray(v) ? v.join("\n") : String(v ?? "");
+  }
+  if (fm.type === "rule") {
+    // Linked exceptions show as "@N text" lines.
+    out.exceptions = fm.exceptions.map((e, i) => (fm.exceptionElements[i] ? `@${fm.exceptionElements[i]} ${e}` : e)).join("\n");
+    out.wisconsinElement = fm.wisconsinElement ? String(fm.wisconsinElement) : "";
   }
   return out;
 }
@@ -68,6 +76,7 @@ export default function NoteForm(props: Props) {
   const [type, setType] = useState<NoteType>(note?.frontmatter.type ?? "case");
   const [fields, setFields] = useState<Fields>(() => (capture ? { date: capture.createdOn } : initialFields(note)));
   const [topics, setTopics] = useState<Set<string>>(() => new Set(note?.topics ?? []));
+  const [related, setRelated] = useState<Set<string>>(() => new Set(note?.frontmatter.type === "rule" ? note.frontmatter.relatedRules : []));
   const [body, setBody] = useState(capture?.text ?? note?.body ?? "");
   const [courseSlug, setCourseSlug] = useState(props.courseSlug);
   const [unitSlug, setUnitSlug] = useState(props.unitSlug);
@@ -102,6 +111,11 @@ export default function NoteForm(props: Props) {
   const pickedUnit = pickedCourse?.units.find((u) => u.slug === unitSlug);
   const syllabusTopics = pickers ? (pickedUnit?.syllabusTopics ?? []) : props.syllabusTopics;
   const existingSlugs = pickers ? (pickedUnit?.existingSlugs ?? []) : props.existingSlugs;
+  const ruleNotes = (pickers ? pickedCourse?.ruleNotes : props.ruleNotes) ?? [];
+  const selfRef = note ? `${props.unitSlug}/notes/${note.slug}.md` : "";
+  const elementLines = (fields.elements ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+  const modifiesIsRef = ruleNotes.some((r) => r.ref === (fields.modifiesRule ?? ""));
+  const [modifiesMode, setModifiesMode] = useState<string>(() => (note?.frontmatter.type === "class" && note.frontmatter.modifiesRule && !modifiesIsRef ? "__text__" : (fields.modifiesRule ?? "")));
 
   function pickCourse(slug: string) {
     setCourseSlug(slug);
@@ -110,7 +124,7 @@ export default function NoteForm(props: Props) {
     setTopics(new Set());
   }
 
-  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+  const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) =>
     setFields((f) => ({ ...f, [key]: e.target.value }));
 
   const derivedSlug = editing
@@ -154,17 +168,84 @@ export default function NoteForm(props: Props) {
         ))}
       </fieldset>
 
-      {FIELD_DEFS[type].map((f) => (
-        <label key={f.key} className="block">
-          <span className="font-medium">{f.label}</span>
-          {f.hint && <span className="ml-2 text-sm text-gray-500">{f.hint}</span>}
-          {f.kind === "text" || f.kind === "date" ? (
-            <input type={f.kind === "date" ? "date" : "text"} name={f.key} value={fields[f.key] ?? ""} onChange={set(f.key)} className={inputCls} />
-          ) : (
-            <textarea name={f.key} value={fields[f.key] ?? ""} onChange={set(f.key)} rows={f.kind === "lines" ? 3 : 3} className={inputCls} />
-          )}
+      {FIELD_DEFS[type].map((f) => {
+        if (type === "class" && f.key === "modifiesRule") {
+          return (
+            <div key={f.key}>
+              <span className="font-medium">Modifies rule</span>
+              <select
+                name="modifiesRuleSelect"
+                value={modifiesMode}
+                onChange={(e) => { setModifiesMode(e.target.value); if (e.target.value !== "__text__") setFields((x) => ({ ...x, modifiesRule: e.target.value })); }}
+                className="mt-1 block w-full rounded border border-gray-300 px-2 py-1"
+              >
+                <option value="">(none)</option>
+                {ruleNotes.map((r) => <option key={r.ref} value={r.ref}>{r.label}</option>)}
+                <option value="__text__">Free text…</option>
+              </select>
+              {modifiesMode === "__text__" ? (
+                <input type="text" name="modifiesRule" value={modifiesIsRef ? "" : (fields.modifiesRule ?? "")} onChange={set("modifiesRule")} placeholder="Describe the rule this class changed" className={inputCls} />
+              ) : (
+                <input type="hidden" name="modifiesRule" value={modifiesMode} />
+              )}
+            </div>
+          );
+        }
+        return (
+          <label key={f.key} className="block">
+            <span className="font-medium">{f.label}</span>
+            {f.hint && <span className="ml-2 text-sm text-gray-500">{f.hint}</span>}
+            {f.kind === "text" || f.kind === "date" ? (
+              <input type={f.kind === "date" ? "date" : "text"} name={f.key} value={fields[f.key] ?? ""} onChange={set(f.key)} className={inputCls} />
+            ) : (
+              <textarea name={f.key} value={fields[f.key] ?? ""} onChange={set(f.key)} rows={f.kind === "lines" ? 3 : 3} className={inputCls} />
+            )}
+          </label>
+        );
+      })}
+
+      {type === "case" && (
+        <label className="block">
+          <span className="font-medium">Applies rule</span> <span className="text-sm text-gray-500">optional link to a rule note</span>
+          <select name="appliesRule" value={fields.appliesRule ?? ""} onChange={set("appliesRule")} className="mt-1 block w-full rounded border border-gray-300 px-2 py-1">
+            <option value="">(none)</option>
+            {ruleNotes.map((r) => <option key={r.ref} value={r.ref}>{r.label}</option>)}
+          </select>
         </label>
-      ))}
+      )}
+
+      {type === "rule" && (
+        <>
+          <label className="block">
+            <span className="font-medium">Wisconsin variation changes element</span>
+            <select name="wisconsinElement" value={fields.wisconsinElement ?? ""} onChange={set("wisconsinElement")} className="mt-1 block rounded border border-gray-300 px-2 py-1">
+              <option value="">(not tied to one element)</option>
+              {elementLines.map((el, i) => <option key={i} value={i + 1}>{i + 1}. {el}</option>)}
+            </select>
+            <span className="ml-2 text-sm text-gray-500">Tie an exception to an element by starting its line with <code className="font-mono">@2 </code> (element 2).</span>
+          </label>
+          <fieldset>
+            <legend className="font-medium">Related rules</legend>
+            {ruleNotes.filter((r) => r.ref !== selfRef).length === 0 ? (
+              <p className="text-sm text-gray-500">No other rule notes in this course yet.</p>
+            ) : (
+              ruleNotes.filter((r) => r.ref !== selfRef).map((r) => (
+                <label key={r.ref} className="mr-4 inline-block text-sm">
+                  <input
+                    type="checkbox"
+                    name="relatedRules"
+                    value={r.ref}
+                    checked={related.has(r.ref)}
+                    onChange={(e) => setRelated((prev) => { const n = new Set(prev); if (e.target.checked) n.add(r.ref); else n.delete(r.ref); return n; })}
+                    className="mr-1"
+                  />
+                  {r.label}
+                </label>
+              ))
+            )}
+          </fieldset>
+        </>
+      )}
 
       <fieldset>
         <legend className="font-medium">Topics</legend>

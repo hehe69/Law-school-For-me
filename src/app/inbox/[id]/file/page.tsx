@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import NoteForm, { type CourseOption } from "@/components/notes/NoteForm";
 import { getCapture } from "@/lib/captures";
-import { loadContent } from "@/lib/content/loader";
+import { loadContent, ruleNoteOptions } from "@/lib/content/loader";
 import { formatDate } from "@/lib/format";
 import { toDateString } from "@/lib/sm2";
 
@@ -17,6 +17,7 @@ export default async function FileCapturePage({ params }: PageProps<"/inbox/[id]
     slug: c.slug,
     title: c.title,
     units: c.units.map((u) => ({ slug: u.slug, title: u.title, syllabusTopics: u.syllabusTopics, existingSlugs: u.notes.map((n) => n.slug) })),
+    ruleNotes: ruleNoteOptions(c).map((r) => ({ ref: r.ref, label: r.label })),
   }));
   const first = pickers.find((c) => c.units.length > 0) ?? pickers[0];
 

@@ -6,7 +6,18 @@ import ClassFields from "./ClassNoteCard";
 import NoteBody from "./NoteBody";
 
 /** Renders a note with the template for its type, a draft badge when fields are missing, and an Edit link. */
-export default function NoteCard({ note, editHref }: { note: Note; editHref?: string }) {
+export type NoteLink = { href: string; label: string };
+export type NoteLinks = {
+  appliesRule?: NoteLink | { text: string };
+  modifiesRule?: NoteLink | { text: string };
+  relatedRules?: (NoteLink | { text: string })[];
+};
+
+function LinkOrText({ v }: { v: NoteLink | { text: string } }) {
+  return "href" in v ? <Link href={v.href} className="text-blue-700 underline">{v.label}</Link> : <span>{v.text} <span className="text-xs text-gray-500">(not a rule note)</span></span>;
+}
+
+export default function NoteCard({ note, editHref, links, treeHref }: { note: Note; editHref?: string; links?: NoteLinks; treeHref?: string }) {
   const fm = note.frontmatter;
   const title =
     fm.type === "class"
@@ -21,6 +32,9 @@ export default function NoteCard({ note, editHref }: { note: Note; editHref?: st
         <h4 className="text-lg font-semibold">{title}</h4>
         <div className="flex shrink-0 items-center gap-2 text-xs">
           {draft && <span className="rounded bg-yellow-200 px-2 py-0.5 font-semibold text-yellow-900">Draft</span>}
+          {treeHref && (
+            <Link href={treeHref} className="rounded border border-gray-300 px-2 py-0.5 hover:bg-gray-50">Tree</Link>
+          )}
           {editHref && (
             <Link href={editHref} className="rounded border border-gray-300 px-2 py-0.5 hover:bg-gray-50">
               Edit
@@ -32,6 +46,15 @@ export default function NoteCard({ note, editHref }: { note: Note; editHref?: st
       {fm.type === "case" && <CaseFields note={fm} />}
       {fm.type === "rule" && <RuleFields note={fm} />}
       {fm.type === "class" && <ClassFields note={fm} />}
+      {links && (links.appliesRule || links.modifiesRule || (links.relatedRules && links.relatedRules.length > 0)) && (
+        <p className="mt-1 text-sm text-gray-700">
+          {links.appliesRule && <>Applies rule: <LinkOrText v={links.appliesRule} /></>}
+          {links.modifiesRule && <>Modifies rule: <LinkOrText v={links.modifiesRule} /></>}
+          {links.relatedRules && links.relatedRules.length > 0 && (
+            <>Related rules: {links.relatedRules.map((r, i) => <span key={i}>{i > 0 && ", "}<LinkOrText v={r} /></span>)}</>
+          )}
+        </p>
+      )}
       <NoteBody body={note.body} courseSlug={courseSlug} unitSlug={unitSlug} />
     </article>
   );

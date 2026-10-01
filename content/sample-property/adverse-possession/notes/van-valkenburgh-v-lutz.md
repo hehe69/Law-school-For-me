@@ -7,6 +7,7 @@ rule: "Placeholder rule. Under the statute, possession must be actual, open and 
 holding: "Placeholder holding. No adverse possession; the use was too slight and Lutz had conceded the true owner's title."
 whyItMatters: "Placeholder. Shows how courts read the 'actual possession' and 'hostile' elements strictly, and how a claimant's own admissions can defeat a claim."
 topics: ["elements"]
+appliesRule: "adverse-possession/notes/elements-of-adverse-possession.md"
 ---
 
 This is **placeholder sample content**. Replace it with your own case brief. The body
