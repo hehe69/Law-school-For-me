@@ -22,6 +22,11 @@ Open http://localhost:3000.
 - `npm run build && npm start` runs the production build. Content is still read
   at request time.
 - `npm run lint` runs ESLint.
+- `package.json` has an `allowScripts` entry approving the install scripts
+  of `better-sqlite3` (native build) and `unrs-resolver` (used by ESLint).
+  npm 12 blocks dependency install scripts unless they are listed there. The
+  approvals are pinned to exact versions, so after upgrading either package
+  run `npm install-scripts approve <package>` and commit the change.
 
 The database is created automatically at `data/study.db` (gitignored). Delete
 the file to wipe all attempt history, flashcard progress, and the inbox.
