@@ -12,7 +12,14 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Mac app build outputs
+    "dist/**",
   ]),
+  // The Electron shell and build scripts are plain CommonJS / Node scripts.
+  {
+    files: ["electron/**/*.cjs", "scripts/**/*.mjs"],
+    rules: { "@typescript-eslint/no-require-imports": "off" },
+  },
 ]);
 
 export default eslintConfig;

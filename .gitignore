@@ -42,3 +42,8 @@ next-env.d.ts
 
 # sqlite database (attempts and progress)
 /data/
+
+# Mac app build outputs
+/dist/
+/electron-builder.generated.json
+/build-origin.json

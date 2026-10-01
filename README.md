@@ -54,6 +54,91 @@ On every server start the app checks `~/Documents/law-school-backups/` and
 writes a fresh backup if the newest one is more than a day old (see
 **Backups**).
 
+## Mac app
+
+The same app can run as a standalone macOS application. It starts the
+production server itself on a free port (localhost only unless network access
+is on), opens one window on it, and stops the server when you quit. No account,
+no signing, no auto-update: you build it yourself from the repository.
+
+### Build it (first time)
+
+1. Install Node.js 22 or newer from https://nodejs.org if you have not.
+2. In Terminal:
+   ```bash
+   git pull
+   npm install
+   npm run package
+   ```
+   The first `npm run package` downloads Electron and takes a few minutes. It
+   builds the site, checks that the SQLite module loads under Electron
+   (rebuilding it only if it does not, which would need the Xcode command line
+   tools: `xcode-select --install`), and writes
+   `dist/mac-arm64/Law Study.app` (or `dist/mac/` on an Intel Mac) plus
+   `dist/Law Study-<version>.dmg`.
+3. Drag `Law Study.app` from `dist/mac-arm64/` (or open the `.dmg` and drag
+   from there) into your Applications folder.
+4. First open: because the app is not signed, double-clicking is refused.
+   **Right-click the app, choose Open, then click Open** in the warning. macOS
+   remembers this; after that it opens normally. On macOS Sequoia or newer, if
+   the right-click route is also refused, open System Settings → Privacy &
+   Security, scroll to the message about Law Study, and click "Open Anyway".
+5. The first launch shows a dialog with the two folders it will use. Confirm
+   or pick a content folder. It creates them if they do not exist.
+
+### Where the data lives
+
+- Content (notes, questions, maps, readings): by default
+  `~/Documents/law-school-for-me/content`.
+- Database (attempts, flashcards, inbox, network setting): by default
+  `~/Documents/law-school-for-me/data/study.db`.
+- If you built the app from a repository that already has `content/` and
+  `data/study.db` (that is, you have been using `npm run dev`), the first-launch
+  dialog proposes those folders instead, so the app and the browser version
+  share one set of notes and one history.
+- Both are stored in `~/Library/Application Support/Law Study/settings.json`
+  as `contentDir` and `dataDir`; edit that file to move them (quit the app
+  first). The menu has "Open settings file".
+- Backups, outline exports, and the inbox keep going to the same places as the
+  browser version: `~/Documents/law-school-backups` and
+  `~/Documents/law-school-outlines`.
+
+The browser version is unchanged: `npm run dev` uses `./content` and `./data`
+in the repository. To point it at the app's folders instead, set
+`LAW_STUDY_CONTENT_DIR` and `LAW_STUDY_DATA_DIR` before starting it.
+
+### Menu
+
+Law Study → Open content folder (reveals it in Finder), Open data folder, Open
+settings file, Quit. View → Reload, zoom in / out / reset, full screen.
+
+### Updating after a session
+
+When new commits arrive:
+
+```bash
+git pull
+npm install
+npm run package
+```
+
+then quit the app, drag the new `Law Study.app` over the old one in
+Applications, and open it. Your notes and database are outside the app, so
+nothing is lost.
+
+### Icon
+
+Put a PNG at `assets/icon.png`, square, **1024 × 1024 pixels**, and rebuild.
+Without it the app uses Electron's default icon.
+
+### If it does not start
+
+Problems show in a dialog rather than a blank window: the port being in use
+(quit the other copy or the browser version), a missing content folder (create
+it or fix `contentDir` in the settings file), a locked database (close
+whatever else has `study.db` open), or a build problem (run `npm run package`
+again). The server's own output is included in the message.
+
 ## Stack
 
 Next.js 16 (App Router) + TypeScript, Tailwind for minimal styling,
@@ -929,6 +1014,22 @@ The **Gaps** page lists, per course:
 - **Duplicating a linked box drops the link**, so you never get two boxes
   writing to the same element definition.
 - **The rule tree is HTML, not a graph**, because it has to print cleanly.
+- **The Mac app runs the real production server as a child process** on
+  Electron's bundled Node, so there is one code path for both versions and no
+  Node install is needed on the Mac.
+- **better-sqlite3 is not rebuilt unless it fails to load.** Version 13 ships
+  Node-API binaries, which Electron loads as they are; `npm run package`
+  verifies that and falls back to a rebuild, so most people never need Xcode.
+- **The content and data folders are passed as environment variables**
+  (`LAW_STUDY_CONTENT_DIR`, `LAW_STUDY_DATA_DIR`), with `./content` and
+  `./data` as the defaults, so `npm run dev` is unchanged and the app can point
+  anywhere.
+- **If the app is packaged from a repository that already has notes and a
+  database, it offers those folders on first launch**, so the app and the dev
+  version share one set of notes. The build records the repository path in
+  `build-origin.json` inside the bundle for that purpose.
+- **The bundle is not an asar archive** so the native module and the
+  standalone server load from ordinary files.
 - **The diagnostic counts the issue question inside the total**, so a request
   for N questions gives N questions. The unit that supplies it loses one
   multiple-choice slot.
@@ -963,6 +1064,8 @@ src/lib/map.ts            mastery colours for rule notes
 src/lib/content/mapfile.ts map.json schema, read, write
 src/lib/mapnotes.ts       the note list the map editor pulls from
 src/lib/settings.ts       data/settings.json (network access)
+electron/                 Mac app: main process, server launcher, folder settings
+scripts/package.mjs       builds the Mac app into dist/
 src/components/mapeditor/ the React Flow editor: model, nodes, edges, panels, export, print
 src/app/files/            route that serves readings/ and images/
 scripts/dev.mjs           dev/start launcher: all interfaces, prints local IP

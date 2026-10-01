@@ -27,7 +27,8 @@ function loadImages(unitDir: string): string[] {
 }
 import { normaliseRuleNoteRef, parseFrontmatter, validateCourseJson, validateQuestion, validateTopics, validateUnitJson } from "./validate";
 
-export const CONTENT_ROOT = path.join(process.cwd(), "content");
+/** The content folder: LAW_STUDY_CONTENT_DIR when set (the Mac app sets it), otherwise ./content. */
+export const CONTENT_ROOT = process.env.LAW_STUDY_CONTENT_DIR ? path.resolve(process.env.LAW_STUDY_CONTENT_DIR) : path.join(process.cwd(), "content");
 
 function rel(p: string) {
   return path.relative(CONTENT_ROOT, p).split(path.sep).join("/");

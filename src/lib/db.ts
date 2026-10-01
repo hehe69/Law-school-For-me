@@ -5,7 +5,9 @@ import fs from "node:fs";
 import path from "node:path";
 import Database from "better-sqlite3";
 
-const DB_PATH = path.join(process.cwd(), "data", "study.db");
+/** The data folder: LAW_STUDY_DATA_DIR when set (the Mac app sets it), otherwise ./data. */
+export const DATA_DIR = process.env.LAW_STUDY_DATA_DIR ? path.resolve(process.env.LAW_STUDY_DATA_DIR) : path.join(process.cwd(), "data");
+const DB_PATH = path.join(DATA_DIR, "study.db");
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS attempts (

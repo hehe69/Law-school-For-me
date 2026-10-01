@@ -3,8 +3,9 @@
 
 import fs from "node:fs";
 import path from "node:path";
+import { DATA_DIR } from "./db";
 
-export const SETTINGS_PATH = path.join(process.cwd(), "data", "settings.json");
+export const SETTINGS_PATH = path.join(DATA_DIR, "settings.json");
 
 export type Settings = {
   /** true: listen on all interfaces so other devices on the wifi can open the app. false: this computer only. */

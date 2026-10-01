@@ -14,7 +14,8 @@ const port = portIndex >= 0 ? rest[portIndex + 1] : process.env.PORT || "3000";
 
 let networkAccess = false;
 try {
-  networkAccess = JSON.parse(fs.readFileSync(path.join(process.cwd(), "data", "settings.json"), "utf8")).networkAccess === true;
+  const dataDir = process.env.LAW_STUDY_DATA_DIR ? path.resolve(process.env.LAW_STUDY_DATA_DIR) : path.join(process.cwd(), "data");
+  networkAccess = JSON.parse(fs.readFileSync(path.join(dataDir, "settings.json"), "utf8")).networkAccess === true;
 } catch {
   // no settings file yet: default off
 }
