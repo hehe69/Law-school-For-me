@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import ContentErrors from "@/components/ContentErrors";
 import UnitTable from "@/components/UnitTable";
 import { setExamDateAction } from "@/app/content-actions";
-import { unitStatsMap } from "@/lib/attempts";
+import { listDiagnostics, unitStatsMap } from "@/lib/attempts";
+import { formatDate, formatScore } from "@/lib/format";
 import { findCourse, loadContent } from "@/lib/content/loader";
 import { examPlan } from "@/lib/exam";
 
@@ -17,6 +18,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
   const errors = tree.errors.filter((e) => e.path.startsWith(`${course.slug}/`) || e.path === course.slug);
   const stats = unitStatsMap();
   const plan = examPlan(course, stats);
+  const diagnostics = listDiagnostics(course.slug);
 
   return (
     <div>
@@ -28,6 +30,7 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
 
       <div className="mb-6 flex flex-wrap items-center gap-3 text-sm">
         <Link href={`/courses/${course.slug}/units/new`} className="rounded bg-blue-700 px-4 py-2 text-white">New unit</Link>
+        <Link href={`/courses/${course.slug}/diagnostic`} className="rounded border border-blue-700 px-4 py-2 text-blue-800">Diagnostic</Link>
         <Link href={`/courses/${course.slug}/weak-tags`} className="text-blue-700 underline">Weak tags</Link>
         <Link href={`/review?course=${course.slug}`} className="text-blue-700 underline">Review cards</Link>
         <Link href={`/courses/${course.slug}/outline`} className="text-blue-700 underline">Outline</Link>
@@ -49,6 +52,22 @@ export default async function CoursePage({ params }: PageProps<"/courses/[course
       </form>
 
       <UnitTable course={course} stats={stats} showEdit />
+
+      <section className="mt-8">
+        <h2 className="mb-2 text-lg font-semibold">Diagnostics</h2>
+        {diagnostics.length === 0 ? (
+          <p className="text-sm text-gray-600">None yet. <Link href={`/courses/${course.slug}/diagnostic`} className="underline">Take one</Link> at the start of term and again before the exam.</p>
+        ) : (
+          <ul className="space-y-1 text-sm">
+            {diagnostics.map((a) => (
+              <li key={a.id}>
+                {formatDate(a.finished_at)} · <strong>{formatScore(a.score_percent)}</strong> ({a.points_earned}/{a.points_possible} points, {a.question_count} questions) ·{" "}
+                <Link href={`/attempts/${a.id}`} className="text-blue-700 underline">Report</Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

@@ -241,7 +241,7 @@ export const DEFAULT_SECONDS_PER_QUESTION = 90;
 /** Scopes chosen on the test setup page; the pool is a set of units. */
 export type PoolScope = "unit" | "upto" | "course";
 /** Every scope an attempt can have. "tags" and "retry" tests are built from question ids, not units. */
-export type Scope = PoolScope | "tags" | "retry";
+export type Scope = PoolScope | "tags" | "retry" | "diagnostic";
 
 export const SCOPE_LABELS: Record<Scope, string> = {
   unit: "This unit",
@@ -249,6 +249,7 @@ export const SCOPE_LABELS: Record<Scope, string> = {
   course: "Whole course",
   tags: "Weakest tags",
   retry: "Retry missed",
+  diagnostic: "Diagnostic",
 };
 
 export function isPoolScope(v: unknown): v is PoolScope {
@@ -256,7 +257,7 @@ export function isPoolScope(v: unknown): v is PoolScope {
 }
 
 export function isScope(v: unknown): v is Scope {
-  return isPoolScope(v) || v === "tags" || v === "retry";
+  return isPoolScope(v) || v === "tags" || v === "retry" || v === "diagnostic";
 }
 
 /** Questions that can appear in tests: everything not marked disabled. */

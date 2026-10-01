@@ -6,6 +6,8 @@ import { fileUrl, findQuestion, findRuleNote, loadContent, SCOPE_LABELS } from "
 import type { Course, IssueQuestion, McQuestion } from "@/lib/content/types";
 import { choiceLetter, formatDate, formatDuration, formatScore } from "@/lib/format";
 import { missedInAttempt } from "@/lib/weakTags";
+import DiagnosticReportView from "@/components/DiagnosticReportView";
+import type { DiagnosticReport } from "@/lib/diagnostic";
 
 export const dynamic = "force-dynamic";
 
@@ -138,7 +140,9 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
   const course = tree.courses.find((c) => c.slug === attempt.course_slug);
   const unit = course?.units.find((u) => u.slug === attempt.unit_slug);
   // Weak-tag tests belong to the course, not a unit; their links go to the weak-tags page instead.
-  const base = unit ? `/courses/${attempt.course_slug}/units/${attempt.unit_slug}` : `/courses/${attempt.course_slug}/weak-tags`;
+  const isDiagnostic = attempt.scope === "diagnostic";
+  const base = unit ? `/courses/${attempt.course_slug}/units/${attempt.unit_slug}` : isDiagnostic ? `/courses/${attempt.course_slug}` : `/courses/${attempt.course_slug}/weak-tags`;
+  const report: DiagnosticReport | null = isDiagnostic && attempt.diagnostic_report ? JSON.parse(attempt.diagnostic_report) : null;
   const parentTitle = unit?.title ?? (attempt.unit_slug || (course?.title ?? attempt.course_slug));
   const missedIds = missedInAttempt(attempt.id);
   const retryHref = `/courses/${attempt.course_slug}/test/run?scope=retry${unit ? `&unit=${unit.slug}` : ""}&ids=${encodeURIComponent(missedIds.join(","))}`;
@@ -164,7 +168,7 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
           </>
         )}
       </p>
-      <h1 className="mb-4 text-2xl font-semibold">Results</h1>
+      <h1 className="mb-4 text-2xl font-semibold">{isDiagnostic ? "Diagnostic results" : "Results"}</h1>
 
       {sp.grade === "saved" && <p className="mb-4 rounded border border-green-300 bg-green-50 p-3 text-sm text-green-900">Grading saved.</p>}
       {sp.grade === "incomplete" && <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900">Pick spotted, missed, or wrong rule for every issue, then save again.</p>}
@@ -200,6 +204,8 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
         )}
       </dl>
 
+      {report && <DiagnosticReportView report={report} courseSlug={attempt.course_slug} />}
+
       <div className="mb-4 flex flex-wrap items-center gap-3 text-sm">
         <span className="font-medium">Show:</span>
         <Link href={`/attempts/${attempt.id}`} className={wrongOnly ? "underline" : "font-semibold"}>All ({questions.length})</Link>
@@ -208,7 +214,7 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
           <Link href={retryHref} className="ml-auto rounded border border-red-300 px-3 py-1 text-red-800">Retry wrong ({missedIds.length})</Link>
         )}
         <Link href={unit ? `${base}/test` : base} className={`rounded border border-gray-300 px-3 py-1 ${missedIds.length > 0 ? "" : "ml-auto"}`}>
-          {unit ? "Take another test" : "Back to weak tags"}
+          {unit ? "Take another test" : isDiagnostic ? "Back to course" : "Back to weak tags"}
         </Link>
       </div>
 

@@ -4,8 +4,9 @@
 // Grades against the content on disk and stores the attempt in SQLite.
 
 import { redirect } from "next/navigation";
-import { findNoteByPath, findQuestion, isScope, loadContent } from "@/lib/content/loader";
-import { getAttempt, gradeIssues, insertAttempt, type IssueResult, type IssueResultEntry, type NewAttemptQuestion } from "@/lib/attempts";
+import { findCourse, findNoteByPath, findQuestion, isScope, loadContent } from "@/lib/content/loader";
+import { buildReport } from "@/lib/diagnostic";
+import { getAttempt, gradeIssues, insertAttempt, setDiagnosticReport, type IssueResult, type IssueResultEntry, type NewAttemptQuestion } from "@/lib/attempts";
 import { cardFromNote } from "@/lib/cards";
 import { rateCard } from "@/lib/reviews";
 import { isRating } from "@/lib/sm2";
@@ -68,7 +69,17 @@ export async function submitAttempt(input: SubmitInput): Promise<SubmitResult> {
     autoSubmitted: Boolean(input.autoSubmitted),
     questions: graded,
   });
+  if (input.scope === "diagnostic") saveReport(attemptId);
   return { ok: true, attemptId };
+}
+
+/** Compute and store the diagnostic report from the attempt's current rows. */
+function saveReport(attemptId: number) {
+  const data = getAttempt(attemptId);
+  if (!data) return;
+  const course = findCourse(loadContent(), data.attempt.course_slug);
+  if (!course) return;
+  setDiagnosticReport(attemptId, JSON.stringify(buildReport(course, data.questions)));
 }
 
 // Flashcard rating from the review page's plain form. Redirects back to the queue.
@@ -110,5 +121,6 @@ export async function gradeIssuesAction(formData: FormData): Promise<void> {
   }
   if (missing.length) redirect(`/attempts/${attemptId}?grade=incomplete#grading`);
   gradeIssues(attemptId, grades);
+  if (data.attempt.scope === "diagnostic") saveReport(attemptId);
   redirect(`/attempts/${attemptId}?grade=saved`);
 }

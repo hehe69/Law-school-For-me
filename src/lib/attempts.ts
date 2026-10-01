@@ -19,6 +19,8 @@ export type AttemptRow = {
   /** 1 per multiple-choice question, 1 per issue in an issue question */
   points_earned: number;
   points_possible: number;
+  /** JSON DiagnosticReport, only for scope = 'diagnostic' */
+  diagnostic_report: string | null;
 };
 
 export type IssueResult = "spotted" | "missed" | "wrong-rule";
@@ -153,4 +155,30 @@ export function unitStatsMap(): Map<string, UnitStats> {
     map.set(`${r.course_slug}/${r.unit_slug}`, { bestScore: r.best, lastAttemptAt: r.last, attemptCount: r.n });
   }
   return map;
+}
+
+export function setDiagnosticReport(attemptId: number, reportJson: string): void {
+  getDb().prepare("UPDATE attempts SET diagnostic_report = ? WHERE id = ?").run(reportJson, attemptId);
+}
+
+export function listDiagnostics(courseSlug: string): AttemptRow[] {
+  return getDb()
+    .prepare("SELECT * FROM attempts WHERE course_slug = ? AND scope = 'diagnostic' ORDER BY finished_at DESC")
+    .all(courseSlug) as AttemptRow[];
+}
+
+/** Most recent diagnostic per course, keyed by course slug. */
+export function lastDiagnosticByCourse(): Map<string, AttemptRow> {
+  const rows = getDb()
+    .prepare("SELECT * FROM attempts WHERE scope = 'diagnostic' ORDER BY finished_at DESC")
+    .all() as AttemptRow[];
+  const map = new Map<string, AttemptRow>();
+  for (const r of rows) if (!map.has(r.course_slug)) map.set(r.course_slug, r);
+  return map;
+}
+
+/** Ids of questions that have appeared in any attempt for this course. */
+export function seenQuestionIds(courseSlug: string): Set<string> {
+  const rows = getDb().prepare("SELECT DISTINCT question_id FROM attempt_questions WHERE course_slug = ?").all(courseSlug) as { question_id: string }[];
+  return new Set(rows.map((r) => r.question_id));
 }

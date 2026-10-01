@@ -341,8 +341,8 @@ questions are skipped without dropping the rest of the file.
 From a unit page, "Start test" opens setup:
 
 - **Scope**: this unit, all units up to this one (by `order`), or the whole
-  course. Two more scopes exist that are not chosen here: "Weakest tags" and
-  "Retry missed" (see below).
+  course. Three more scopes exist that are not chosen here: "Weakest tags",
+  "Retry missed", and "Diagnostic" (see below).
 - **Format**: multiple choice only, issue spotter only, or a **mixed exam**.
 - **Multiple-choice questions** and **Seconds per multiple-choice question**
   (default 90).
@@ -407,7 +407,8 @@ attempts (
   id, course_slug, unit_slug, scope, started_at, finished_at,
   time_limit_seconds, time_used_seconds, auto_submitted,
   question_count, correct_count, score_percent,
-  points_earned, points_possible
+  points_earned, points_possible,
+  diagnostic_report       -- JSON, scope = 'diagnostic' only
 )
 attempt_questions (
   attempt_id, position, course_slug, unit_slug, question_id,
@@ -492,6 +493,31 @@ seen; tags no longer used by any question are skipped). The test uses all
 matching questions at 90 seconds each. Its attempts belong to the course rather
 than a unit, so they appear on the weak-tags page under "Recent weak-tag
 tests" and not in any unit's history or home-page stats.
+
+## Diagnostic exam
+
+**Diagnostic** on a course page builds one test that samples the whole course.
+Setup asks only how many questions: default 2 per unit, minimum 1 per unit,
+counting only units that have questions. The sample spreads evenly across
+those units (spare questions go to the units with the most), and within each
+unit round-robins across tags, taking questions you have never seen before
+ones you have. If the course has issue questions, one is included from the
+unit that has the most (preferring an unseen one) and that unit gives up one
+multiple-choice slot for it. Timing is standard: 90 seconds per multiple
+choice plus the issue question's minutes.
+
+The results page adds a **diagnostic report**: per unit and per tag, questions
+seen, correct, and a rating using the mastery thresholds (strong ≥ 70%
+correct, okay ≥ 40%, weak below, untested = nothing graded). Units with no
+questions are listed as untested. A recommended order lists the weakest units
+first, then the untested ones. Ungraded issue questions are left out of the
+counts; grade them and the report is rebuilt.
+
+The report is saved with the attempt (`attempts.diagnostic_report`, JSON), so
+it reflects the course as it was that day. The course page lists every
+diagnostic with its date and overall score under "Diagnostics", and the home
+page shows each course's last diagnostic or a "take one" link. Diagnostics
+belong to the course, not a unit, so they do not appear in unit history.
 
 ## Retry missed
 
@@ -800,6 +826,14 @@ The **Gaps** page lists, per course:
 - **The map is laid out in the browser** (dagre), with unlinked notes placed
   by hand to the right of the layout's bounding box.
 - **The rule tree is HTML, not a graph**, because it has to print cleanly.
+- **The diagnostic counts the issue question inside the total**, so a request
+  for N questions gives N questions. The unit that supplies it loses one
+  multiple-choice slot.
+- **Diagnostic ratings reuse the map's mastery thresholds** rather than
+  inventing a second scale.
+- **The report is a snapshot.** It is rebuilt only when you grade the
+  diagnostic's issue question, never when content changes later, so two
+  diagnostics stay comparable.
 
 ## Not built yet (schema left open)
 
@@ -821,6 +855,7 @@ src/instrumentation.ts    runs the stale-backup check at server start
 src/lib/testing.ts        shuffle and question-stripping for test runs
 src/lib/outline.ts        course outline builder and markdown export
 src/lib/exam.ts           exam countdown and units-per-week
+src/lib/diagnostic.ts     diagnostic sampling and report
 src/lib/map.ts            map nodes, edges, and mastery colours
 src/lib/settings.ts       data/settings.json (network access)
 src/components/map/       GraphView (cytoscape) and the map page shell

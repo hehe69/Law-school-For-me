@@ -102,6 +102,7 @@ function migrate(db: Database.Database) {
   // Points: multiple choice = 1 per question, issue questions = 1 per issue spotted.
   ensure("attempts", "points_earned", "INTEGER");
   ensure("attempts", "points_possible", "INTEGER");
+  ensure("attempts", "diagnostic_report", "TEXT"); // JSON DiagnosticReport for scope = 'diagnostic'
   db.exec("UPDATE attempts SET points_earned = correct_count, points_possible = question_count WHERE points_possible IS NULL");
   // Issue-spotter rows.
   ensure("attempt_questions", "question_type", "TEXT NOT NULL DEFAULT 'mc'");

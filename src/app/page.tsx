@@ -1,7 +1,7 @@
 import Link from "next/link";
 import ContentErrors from "@/components/ContentErrors";
 import { loadContent } from "@/lib/content/loader";
-import { unitStatsMap } from "@/lib/attempts";
+import { lastDiagnosticByCourse, unitStatsMap } from "@/lib/attempts";
 import { dueByCourse } from "@/lib/reviews";
 import { formatDate } from "@/lib/format";
 import { lastBackup } from "@/lib/backup";
@@ -20,6 +20,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
   const totalDue = [...due.values()].reduce((n, d) => n + d.due, 0);
   const last = lastBackup();
   const settings = readSettings();
+  const diagnostics = lastDiagnosticByCourse();
 
   return (
     <div>
@@ -91,6 +92,7 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
 
       {tree.courses.map((course) => {
         const plan = examPlan(course, stats);
+        const diag = diagnostics.get(course.slug);
         return (
         <section key={course.slug} className="mb-8">
           <h2 className="mb-2 flex items-baseline gap-3 text-xl font-semibold">
@@ -100,6 +102,13 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
             <Link href={`/courses/${course.slug}/outline`} className="text-sm font-normal text-blue-700 underline">Outline</Link>
             <Link href={`/courses/${course.slug}/map`} className="text-sm font-normal text-blue-700 underline">Map</Link>
           </h2>
+          <p className="mb-2 text-sm text-gray-700">
+            {diag ? (
+              <>Last diagnostic {formatDate(diag.finished_at)} · {Math.round(diag.score_percent)}% · <Link href={`/attempts/${diag.id}`} className="text-blue-700 underline">report</Link></>
+            ) : (
+              <>No diagnostic yet · <Link href={`/courses/${course.slug}/diagnostic`} className="text-blue-700 underline">take one</Link></>
+            )}
+          </p>
           {plan && (
             <p className={`mb-2 text-sm ${plan.daysRemaining >= 0 && plan.daysRemaining <= 7 ? "text-red-700" : "text-gray-700"}`}>
               Exam {plan.examDate}:{" "}
