@@ -91,6 +91,15 @@ export function validateFrontmatter(
   return { ok: false, problems: [`"type" must be one of: case, rule, class (got ${JSON.stringify(type)})`] };
 }
 
+/** Optional "topics" list on any note type. Missing means []. */
+export function validateTopics(raw: unknown): { ok: true; value: string[] } | { ok: false; problems: Problems } {
+  if (!isRecord(raw) || raw.topics === undefined) return { ok: true, value: [] };
+  const problems: Problems = [];
+  requireStringList(raw, "topics", problems);
+  if (problems.length) return { ok: false, problems };
+  return { ok: true, value: (raw.topics as string[]).map((t) => t.trim()).filter(Boolean) };
+}
+
 export function validateQuestion(
   raw: unknown,
   courseSlug: string,

@@ -12,6 +12,7 @@ exceptions:
   - "Disabilities of the true owner may toll the statute"
   - "Government land is generally not subject to adverse possession"
 wisconsinVariation: "Placeholder. Wis. Stat. § 893.25 sets a 20-year period without color of title; shorter periods apply with color of title or payment of taxes (§§ 893.26, 893.27). Verify against the statute."
+topics: ["elements", "Wisconsin statute"]
 ---
 
 Placeholder body. Tacking: successive possessors in privity may add their periods together.

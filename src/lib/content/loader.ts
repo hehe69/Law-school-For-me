@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import type { ContentError, ContentTree, Course, Note, Question, Unit } from "./types";
-import { validateCourseJson, validateFrontmatter, validateQuestion, validateUnitJson } from "./validate";
+import { validateCourseJson, validateFrontmatter, validateQuestion, validateTopics, validateUnitJson } from "./validate";
 
 export const CONTENT_ROOT = path.join(process.cwd(), "content");
 
@@ -50,7 +50,12 @@ function loadNotes(unitDir: string, errors: ContentError[]): Note[] {
       errors.push({ path: rel(full), message: result.problems.join("; ") });
       continue;
     }
-    notes.push({ slug: file.replace(/\.md$/, ""), path: rel(full), frontmatter: result.value, body: parsed.content.trim() });
+    const topics = validateTopics(parsed.data);
+    if (!topics.ok) {
+      errors.push({ path: rel(full), message: topics.problems.join("; ") });
+      continue;
+    }
+    notes.push({ slug: file.replace(/\.md$/, ""), path: rel(full), frontmatter: result.value, topics: topics.value, body: parsed.content.trim() });
   }
   return notes;
 }
@@ -188,6 +193,17 @@ export function questionsForScope(course: Course, unit: Unit, scope: Scope): Que
   const units =
     scope === "unit" ? [unit] : scope === "upto" ? course.units.filter((u) => u.order <= unit.order) : course.units;
   return units.flatMap((u) => u.questions);
+}
+
+/** Look up a note by its content-relative path (the flashcard key). */
+export function findNoteByPath(tree: ContentTree, notePath: string): { course: Course; unit: Unit; note: Note } | undefined {
+  for (const course of tree.courses) {
+    for (const unit of course.units) {
+      const note = unit.notes.find((n) => n.path === notePath);
+      if (note) return { course, unit, note };
+    }
+  }
+  return undefined;
 }
 
 /** Look up a question by its stored identity; undefined if it has since been removed from content. */

@@ -5,6 +5,7 @@ import NoteCard from "@/components/notes/NoteCard";
 import { findUnit, loadContent } from "@/lib/content/loader";
 import type { NoteType } from "@/lib/content/types";
 import { listAttemptsForUnit } from "@/lib/attempts";
+import { cardsForUnit } from "@/lib/cards";
 import { formatDate, formatScore } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -23,6 +24,7 @@ export default async function UnitPage({ params }: PageProps<"/courses/[course]/
   const { course, unit } = found;
   const base = `/courses/${course.slug}/units/${unit.slug}`;
   const recent = listAttemptsForUnit(course.slug, unit.slug).slice(0, 3);
+  const cardCount = cardsForUnit(course, unit).length;
 
   return (
     <div>
@@ -51,6 +53,9 @@ export default async function UnitPage({ params }: PageProps<"/courses/[course]/
         )}
         <Link href={`${base}/history`} className="text-sm text-blue-700 underline">
           Attempt history
+        </Link>
+        <Link href={`${base}/cards`} className="text-sm text-blue-700 underline">
+          Flashcards ({cardCount})
         </Link>
         {recent.length > 0 && (
           <span className="text-sm text-gray-600">

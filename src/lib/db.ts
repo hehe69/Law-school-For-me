@@ -1,4 +1,4 @@
-// SQLite holds test attempts and progress only. Content never goes here.
+// SQLite holds test attempts and flashcard review state only. Content never goes here.
 // The file lives at data/study.db (gitignored) and is created on first use.
 
 import fs from "node:fs";
@@ -37,8 +37,35 @@ CREATE TABLE IF NOT EXISTS attempt_questions (
   PRIMARY KEY (attempt_id, position)
 );
 
+-- Spaced-repetition state, one row per flashcard. card_key is the note's path under content/.
+CREATE TABLE IF NOT EXISTS card_states (
+  card_key TEXT PRIMARY KEY,
+  course_slug TEXT NOT NULL,
+  unit_slug TEXT NOT NULL,
+  ease REAL NOT NULL DEFAULT 2.5,
+  interval_days INTEGER NOT NULL DEFAULT 0,
+  repetitions INTEGER NOT NULL DEFAULT 0,
+  due_on TEXT NOT NULL,
+  last_reviewed_at TEXT,
+  last_rating INTEGER
+);
+
+-- Every rating ever given, for history and "last reviewed" queries.
+CREATE TABLE IF NOT EXISTS card_reviews (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  card_key TEXT NOT NULL,
+  course_slug TEXT NOT NULL,
+  unit_slug TEXT NOT NULL,
+  reviewed_at TEXT NOT NULL,
+  rating INTEGER NOT NULL,
+  interval_days INTEGER NOT NULL,
+  ease REAL NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_attempts_unit ON attempts(course_slug, unit_slug, finished_at);
 CREATE INDEX IF NOT EXISTS idx_attempt_questions_question ON attempt_questions(course_slug, unit_slug, question_id);
+CREATE INDEX IF NOT EXISTS idx_card_states_due ON card_states(due_on);
+CREATE INDEX IF NOT EXISTS idx_card_reviews_unit ON card_reviews(course_slug, unit_slug, reviewed_at);
 `;
 
 // Keep one connection per process. In dev, Next reloads modules, so stash it on globalThis.

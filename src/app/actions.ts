@@ -3,8 +3,12 @@
 // Server action called by the test runner when a test is submitted (or auto-submitted).
 // Grades against the content on disk and stores the attempt in SQLite.
 
-import { findQuestion, isScope, loadContent } from "@/lib/content/loader";
+import { redirect } from "next/navigation";
+import { findNoteByPath, findQuestion, isScope, loadContent } from "@/lib/content/loader";
 import { insertAttempt } from "@/lib/attempts";
+import { cardFromNote } from "@/lib/cards";
+import { rateCard } from "@/lib/reviews";
+import { isRating } from "@/lib/sm2";
 
 export type SubmitInput = {
   courseSlug: string;
@@ -51,4 +55,18 @@ export async function submitAttempt(input: SubmitInput): Promise<SubmitResult> {
     questions: graded,
   });
   return { ok: true, attemptId };
+}
+
+// Flashcard rating from the review page's plain form. Redirects back to the queue.
+export async function rateCardAction(formData: FormData): Promise<void> {
+  const cardKey = String(formData.get("cardKey") ?? "");
+  const rating = Number(formData.get("rating"));
+  const course = String(formData.get("course") ?? "");
+  if (!isRating(rating)) throw new Error("rating must be 1-4");
+  const found = findNoteByPath(loadContent(), cardKey);
+  if (!found) throw new Error(`card ${cardKey} no longer exists in content`);
+  const card = cardFromNote(found.course, found.unit, found.note);
+  if (!card) throw new Error(`note ${cardKey} is not a flashcard type`);
+  rateCard(card, rating);
+  redirect(course ? `/review?course=${encodeURIComponent(course)}` : "/review");
 }

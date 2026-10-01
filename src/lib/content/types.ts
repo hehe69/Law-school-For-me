@@ -41,6 +41,8 @@ export type Note = {
   slug: string;
   path: string;
   frontmatter: NoteFrontmatter;
+  /** Optional syllabus topics this note covers (frontmatter "topics"), used by the Gaps view */
+  topics: string[];
   /** Markdown below the frontmatter, may be empty */
   body: string;
 };

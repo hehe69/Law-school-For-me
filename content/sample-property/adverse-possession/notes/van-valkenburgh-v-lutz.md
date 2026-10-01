@@ -6,6 +6,7 @@ issue: "Placeholder issue. Whether Lutz's use was sufficient to establish title 
 rule: "Placeholder rule. Under the statute, possession must be actual, open and notorious, exclusive, hostile, and continuous for the statutory period; cultivation or improvement of the land was required for a claim not under written instrument."
 holding: "Placeholder holding. No adverse possession; the use was too slight and Lutz had conceded the true owner's title."
 whyItMatters: "Placeholder. Shows how courts read the 'actual possession' and 'hostile' elements strictly, and how a claimant's own admissions can defeat a claim."
+topics: ["elements"]
 ---
 
 This is **placeholder sample content**. Replace it with your own case brief. The body

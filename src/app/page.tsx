@@ -2,6 +2,7 @@ import Link from "next/link";
 import ContentErrors from "@/components/ContentErrors";
 import { loadContent } from "@/lib/content/loader";
 import { unitStatsMap } from "@/lib/attempts";
+import { dueByCourse } from "@/lib/reviews";
 import { formatDate, formatScore } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -9,11 +10,36 @@ export const dynamic = "force-dynamic";
 export default function HomePage() {
   const tree = loadContent();
   const stats = unitStatsMap();
+  const due = dueByCourse(tree);
+  const totalDue = [...due.values()].reduce((n, d) => n + d.due, 0);
 
   return (
     <div>
       <h1 className="mb-4 text-2xl font-semibold">Courses</h1>
       <ContentErrors errors={tree.errors} />
+
+      {tree.courses.length > 0 && (
+        <div className="mb-6 rounded border border-gray-200 bg-gray-50 p-4 text-sm">
+          <p className="mb-1 font-semibold">Flashcards due today: {totalDue}</p>
+          <ul className="flex flex-wrap gap-x-6 gap-y-1">
+            {tree.courses.map((course) => {
+              const d = due.get(course.slug) ?? { due: 0, total: 0, newCards: 0 };
+              return (
+                <li key={course.slug}>
+                  {course.title}: <strong>{d.due}</strong> due of {d.total}
+                  {d.newCards > 0 && <span className="text-gray-500"> ({d.newCards} new)</span>}
+                  {d.due > 0 && (
+                    <>
+                      {" "}
+                      <Link href={`/review?course=${course.slug}`} className="text-blue-700 underline">review</Link>
+                    </>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {tree.courses.length === 0 && (
         <p className="text-gray-600">
