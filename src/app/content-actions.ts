@@ -3,12 +3,18 @@
 // Server actions that write to the content/ folder: question import, note save, unit emphasis.
 // Each one re-reads content from disk, validates, writes, and redirects or returns errors.
 
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { findUnit, loadContent } from "@/lib/content/loader";
 import { checkImportBatch, type ImportError, type ImportMode } from "@/lib/content/importer";
 import { validateQuestion, NOTE_FIELDS } from "@/lib/content/validate";
-import { isSlug, noteExists, readRawNote, readRawQuestions, slugify, updateUnitJson, writeNote, writeQuestions } from "@/lib/content/writer";
+import {
+  courseExists, createCourse, createUnit, isSlug, noteExists, readRawNote, readRawQuestions, slugify,
+  unitFolderExists, updateUnitJson, writeNote, writeQuestions,
+} from "@/lib/content/writer";
 import type { NoteType } from "@/lib/content/types";
+import { addCapture, getCapture, markDiscarded, markFiled } from "@/lib/captures";
+import { runBackup } from "@/lib/backup";
 
 /** Browsers submit textarea content with CRLF line endings; files on disk should use LF. */
 function text(formData: FormData, key: string): string {
@@ -126,7 +132,15 @@ export async function saveNoteAction(prev: NoteFormState, formData: FormData): P
     if (noteExists(courseSlug, unitSlug, slug)) return { error: `a note file named "${slug}.md" already exists in this unit; open it with Edit instead` };
   }
 
-  writeNote(courseSlug, unitSlug, slug, data, body);
+  const written = writeNote(courseSlug, unitSlug, slug, data, body);
+
+  // Filing a quick capture: mark it so it leaves the inbox.
+  const captureId = Number(formData.get("captureId"));
+  if (Number.isInteger(captureId) && captureId > 0 && getCapture(captureId)) {
+    markFiled(captureId, written);
+    revalidatePath("/", "layout"); // header inbox count
+  }
+
   redirect(`/courses/${courseSlug}/units/${unitSlug}#note-${slug}`);
 }
 
@@ -139,4 +153,109 @@ export async function saveEmphasisAction(formData: FormData): Promise<void> {
   const emphasis = text(formData, "emphasis").trim();
   updateUnitJson(courseSlug, unitSlug, { emphasis });
   redirect(`/courses/${courseSlug}/units/${unitSlug}`);
+}
+
+// ---------- Courses and units
+
+export type MetaFormState = { error: string | null };
+
+function parseOrder(formData: FormData): number | null {
+  const n = Number(formData.get("order"));
+  return Number.isFinite(n) ? n : null;
+}
+
+export async function createCourseAction(prev: MetaFormState, formData: FormData): Promise<MetaFormState> {
+  const title = text(formData, "title").trim();
+  const order = parseOrder(formData);
+  if (!title) return { error: "enter a title" };
+  if (order === null) return { error: "order must be a number" };
+  const slug = slugify(title);
+  if (!slug) return { error: "the title must contain at least one letter or digit so a folder name can be derived" };
+  try {
+    if (courseExists(slug)) return { error: `a course folder named "${slug}" already exists` };
+    createCourse(slug, { title, order });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  redirect(`/courses/${slug}`);
+}
+
+function parseTopics(formData: FormData): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of formData.getAll("syllabusTopics")) {
+    const v = String(t).replace(/\r\n?/g, "\n").trim();
+    if (v && !seen.has(v.toLowerCase())) {
+      seen.add(v.toLowerCase());
+      out.push(v);
+    }
+  }
+  return out;
+}
+
+export async function createUnitAction(prev: MetaFormState, formData: FormData): Promise<MetaFormState> {
+  const courseSlug = String(formData.get("course") ?? "");
+  const title = text(formData, "title").trim();
+  const order = parseOrder(formData);
+  if (!isSlug(courseSlug)) return { error: "bad course slug" };
+  if (!title) return { error: "enter a title" };
+  if (order === null) return { error: "order must be a number" };
+  const slug = slugify(title);
+  if (!slug) return { error: "the title must contain at least one letter or digit so a folder name can be derived" };
+  try {
+    if (unitFolderExists(courseSlug, slug)) return { error: `a unit folder named "${slug}" already exists in this course` };
+    createUnit(courseSlug, slug, { title, order, syllabusTopics: parseTopics(formData) });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  redirect(`/courses/${courseSlug}/units/${slug}`);
+}
+
+/** Edit title, order, and syllabus topics in unit.json. The folder name and every other key stay as they are. */
+export async function updateUnitAction(prev: MetaFormState, formData: FormData): Promise<MetaFormState> {
+  const courseSlug = String(formData.get("course") ?? "");
+  const unitSlug = String(formData.get("unit") ?? "");
+  const title = text(formData, "title").trim();
+  const order = parseOrder(formData);
+  if (!isSlug(courseSlug) || !isSlug(unitSlug)) return { error: "bad course or unit slug" };
+  if (!title) return { error: "enter a title" };
+  if (order === null) return { error: "order must be a number" };
+  try {
+    updateUnitJson(courseSlug, unitSlug, { title, order, syllabusTopics: parseTopics(formData) });
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  redirect(`/courses/${courseSlug}/units/${unitSlug}`);
+}
+
+// ---------- Backup
+
+export async function backupAction(): Promise<void> {
+  let target = "";
+  try {
+    const written = await runBackup();
+    target = `/?backup=ok&file=${encodeURIComponent(written)}`;
+  } catch (e) {
+    target = `/?backup=error&message=${encodeURIComponent((e as Error).message)}`;
+  }
+  redirect(target);
+}
+
+// ---------- Quick capture
+
+export type CaptureState = { saved: boolean; error: string | null };
+
+export async function captureAction(prev: CaptureState, formData: FormData): Promise<CaptureState> {
+  const body = text(formData, "text").trim();
+  if (!body) return { saved: false, error: "nothing to save" };
+  addCapture(body);
+  revalidatePath("/", "layout"); // refresh the header's inbox count without leaving the page
+  return { saved: true, error: null };
+}
+
+export async function discardCaptureAction(formData: FormData): Promise<void> {
+  const id = Number(formData.get("id"));
+  if (Number.isInteger(id) && id > 0) markDiscarded(id);
+  revalidatePath("/", "layout"); // header inbox count
+  redirect("/inbox");
 }

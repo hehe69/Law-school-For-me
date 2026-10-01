@@ -3,19 +3,45 @@ import ContentErrors from "@/components/ContentErrors";
 import { loadContent } from "@/lib/content/loader";
 import { unitStatsMap } from "@/lib/attempts";
 import { dueByCourse } from "@/lib/reviews";
-import { formatDate, formatScore } from "@/lib/format";
+import { formatDate } from "@/lib/format";
+import { lastBackup } from "@/lib/backup";
+import { backupAction } from "@/app/content-actions";
+import UnitTable from "@/components/UnitTable";
 
 export const dynamic = "force-dynamic";
 
-export default function HomePage() {
+export default async function HomePage({ searchParams }: PageProps<"/">) {
+  const sp = await searchParams;
   const tree = loadContent();
   const stats = unitStatsMap();
   const due = dueByCourse(tree);
   const totalDue = [...due.values()].reduce((n, d) => n + d.due, 0);
+  const last = lastBackup();
 
   return (
     <div>
-      <h1 className="mb-4 text-2xl font-semibold">Courses</h1>
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <h1 className="text-2xl font-semibold">Courses</h1>
+        <Link href="/courses/new" className="rounded border border-gray-300 px-3 py-1 text-sm">New course</Link>
+        <form action={backupAction} className="ml-auto flex items-center gap-2 text-sm">
+          <span className="text-gray-600">
+            {last ? `Last backup ${formatDate(last.mtime.toISOString())}` : "No backup yet"}
+          </span>
+          <button type="submit" className="rounded border border-gray-300 px-3 py-1">Back up now</button>
+        </form>
+      </div>
+
+      {sp.backup === "ok" && typeof sp.file === "string" && (
+        <p className="mb-4 rounded border border-green-300 bg-green-50 p-3 text-sm text-green-900">
+          Backup written to <code className="font-mono">{sp.file}</code>
+        </p>
+      )}
+      {sp.backup === "error" && (
+        <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900">
+          Backup failed: {typeof sp.message === "string" ? sp.message : "unknown error"}
+        </p>
+      )}
+
       <ContentErrors errors={tree.errors} />
 
       {tree.courses.length > 0 && (
@@ -43,68 +69,19 @@ export default function HomePage() {
 
       {tree.courses.length === 0 && (
         <p className="text-gray-600">
-          No courses found. Add a folder under <code className="font-mono">content/</code> with a{" "}
-          <code className="font-mono">course.json</code>. See the README.
+          No courses yet. <Link href="/courses/new" className="underline">Create one</Link>, or add a folder under{" "}
+          <code className="font-mono">content/</code> with a <code className="font-mono">course.json</code>. See the README.
         </p>
       )}
 
       {tree.courses.map((course) => (
         <section key={course.slug} className="mb-8">
           <h2 className="mb-2 flex items-baseline gap-3 text-xl font-semibold">
-            {course.title}
+            <Link href={`/courses/${course.slug}`} className="hover:underline">{course.title}</Link>
+            <Link href={`/courses/${course.slug}/units/new`} className="text-sm font-normal text-blue-700 underline">New unit</Link>
             <Link href={`/courses/${course.slug}/weak-tags`} className="text-sm font-normal text-blue-700 underline">Weak tags</Link>
           </h2>
-          {course.units.length === 0 ? (
-            <p className="text-sm text-gray-600">No units yet.</p>
-          ) : (
-            <table className="w-full border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-gray-300 text-left text-gray-600">
-                  <th className="py-1 pr-2 font-medium">#</th>
-                  <th className="py-1 pr-2 font-medium">Unit</th>
-                  <th className="py-1 pr-2 text-right font-medium">Notes</th>
-                  <th className="py-1 pr-2 text-right font-medium">Questions</th>
-                  <th className="py-1 pr-2 text-right font-medium">Best score</th>
-                  <th className="py-1 pr-2 font-medium">Last attempt</th>
-                </tr>
-              </thead>
-              <tbody>
-                {course.units.map((unit) => {
-                  const s = stats.get(`${course.slug}/${unit.slug}`);
-                  return (
-                    <tr key={unit.slug} className="border-b border-gray-200">
-                      <td className="py-2 pr-2 text-gray-500">{unit.order}</td>
-                      <td className="py-2 pr-2">
-                        <Link href={`/courses/${course.slug}/units/${unit.slug}`} className="text-blue-700 underline">
-                          {unit.title}
-                        </Link>
-                        {unit.errors.length > 0 && (
-                          <span className="ml-2 text-xs text-red-700">{unit.errors.length} file problem(s)</span>
-                        )}
-                      </td>
-                      <td className="py-2 pr-2 text-right">
-                        {unit.notes.length}
-                        {unit.notes.some((n) => n.status === "draft") && (
-                          <span className="ml-1 text-xs text-yellow-900">({unit.notes.filter((n) => n.status === "draft").length} draft)</span>
-                        )}
-                      </td>
-                      <td className="py-2 pr-2 text-right">{unit.questions.length}</td>
-                      <td className="py-2 pr-2 text-right">{formatScore(s?.bestScore ?? null)}</td>
-                      <td className="py-2 pr-2">
-                        {s ? (
-                          <Link href={`/courses/${course.slug}/units/${unit.slug}/history`} className="text-blue-700 underline">
-                            {formatDate(s.lastAttemptAt)}
-                          </Link>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
+          <UnitTable course={course} stats={stats} />
         </section>
       ))}
     </div>

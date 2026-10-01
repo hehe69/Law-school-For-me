@@ -1,4 +1,4 @@
-// SQLite holds test attempts and flashcard review state only. Content never goes here.
+// SQLite holds test attempts, flashcard review state, and the quick-capture inbox. Content never goes here.
 // The file lives at data/study.db (gitignored) and is created on first use.
 
 import fs from "node:fs";
@@ -60,6 +60,16 @@ CREATE TABLE IF NOT EXISTS card_reviews (
   rating INTEGER NOT NULL,
   interval_days INTEGER NOT NULL,
   ease REAL NOT NULL
+);
+
+-- Quick-capture inbox: raw in-class notes not yet filed into any unit.
+CREATE TABLE IF NOT EXISTS captures (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  text TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  filed_at TEXT,
+  filed_note_path TEXT,
+  discarded_at TEXT
 );
 
 CREATE INDEX IF NOT EXISTS idx_attempts_unit ON attempts(course_slug, unit_slug, finished_at);

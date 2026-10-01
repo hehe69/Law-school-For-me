@@ -80,3 +80,47 @@ export function updateUnitJson(courseSlug: string, unitSlug: string, patch: Reco
   const current = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
   writeAtomic(file, JSON.stringify({ ...current, ...patch }, null, 2) + "\n");
 }
+
+// ---- courses and units
+
+function assertSlugOnly(s: string, label: string) {
+  if (!isSlug(s)) throw new Error(`${label} "${s}" is not a valid slug (lowercase letters, digits, hyphens)`);
+}
+
+export function courseExists(courseSlug: string): boolean {
+  assertSlugOnly(courseSlug, "course");
+  return fs.existsSync(path.join(CONTENT_ROOT, courseSlug));
+}
+
+/** Create content/<course>/course.json. Refuses if the folder already exists. */
+export function createCourse(courseSlug: string, meta: { title: string; order: number }): string {
+  assertSlugOnly(courseSlug, "course");
+  const dir = path.join(CONTENT_ROOT, courseSlug);
+  if (fs.existsSync(dir)) throw new Error(`a folder named "${courseSlug}" already exists under content/`);
+  fs.mkdirSync(dir, { recursive: true });
+  writeAtomic(path.join(dir, "course.json"), JSON.stringify(meta, null, 2) + "\n");
+  return `${courseSlug}/course.json`;
+}
+
+export function unitFolderExists(courseSlug: string, unitSlug: string): boolean {
+  assertSlugOnly(courseSlug, "course");
+  assertSlugOnly(unitSlug, "unit");
+  return fs.existsSync(path.join(CONTENT_ROOT, courseSlug, unitSlug));
+}
+
+/** Create content/<course>/<unit>/unit.json and an empty notes/ folder. Refuses if the folder exists. */
+export function createUnit(
+  courseSlug: string,
+  unitSlug: string,
+  meta: { title: string; order: number; syllabusTopics: string[] },
+): string {
+  assertSlugOnly(courseSlug, "course");
+  assertSlugOnly(unitSlug, "unit");
+  const courseDir = path.join(CONTENT_ROOT, courseSlug);
+  if (!fs.existsSync(path.join(courseDir, "course.json"))) throw new Error(`course "${courseSlug}" does not exist`);
+  const dir = path.join(courseDir, unitSlug);
+  if (fs.existsSync(dir)) throw new Error(`a folder named "${unitSlug}" already exists in this course`);
+  fs.mkdirSync(path.join(dir, "notes"), { recursive: true });
+  writeAtomic(path.join(dir, "unit.json"), JSON.stringify(meta, null, 2) + "\n");
+  return `${courseSlug}/${unitSlug}/unit.json`;
+}

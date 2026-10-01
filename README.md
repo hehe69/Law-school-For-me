@@ -24,7 +24,11 @@ Open http://localhost:3000.
 - `npm run lint` runs ESLint.
 
 The database is created automatically at `data/study.db` (gitignored). Delete
-the file to wipe all attempt history and flashcard progress.
+the file to wipe all attempt history, flashcard progress, and the inbox.
+
+On every server start the app checks `~/Documents/law-school-backups/` and
+writes a fresh backup if the newest one is more than a day old (see
+**Backups**).
 
 ## Stack
 
@@ -48,6 +52,9 @@ content/
 Folder names are the slugs and appear in URLs, so keep them lowercase with
 hyphens. Folders starting with `.` or `_` are ignored.
 
+You can create courses and units from the app as well as by hand; the app
+writes exactly the files described below.
+
 ### Add a course
 
 Create `content/<course-slug>/course.json`:
@@ -57,6 +64,10 @@ Create `content/<course-slug>/course.json`:
 ```
 
 `order` controls the order on the home page. Ties sort by title.
+
+Or click **New course** on the home page: enter a title and order, and the
+folder name is derived from the title ("Contracts: Offer & Acceptance" becomes
+`contracts-offer-and-acceptance`). The form warns if that folder exists.
 
 ### Add a unit
 
@@ -72,6 +83,13 @@ Create `content/<course-slug>/<unit-slug>/unit.json`:
 
 `order` is the unit's place in the syllabus. It also drives the "all units up
 to this one" test scope. `syllabusTopics` is optional.
+
+Or click **New unit** on a course page (or next to the course title on the
+home page): title, order (defaults to last + 1), and syllabus topics added one
+at a time. This creates the folder, `unit.json`, and an empty `notes/`.
+**Edit** next to a unit on the course page changes its title, order, and
+syllabus topics in `unit.json` only; the folder name, notes, questions, and
+any other keys such as `emphasis` are untouched.
 
 An optional `"emphasis"` string holds what the professor stressed for the
 unit. The unit page shows it in a callout above the notes and has a box to
@@ -316,6 +334,36 @@ Both use all matching questions at 90 seconds each and are stored with scope
 "Retry missed". A retry started from a unit page or from a unit's results shows
 in that unit's history. Questions removed from content since are skipped.
 
+## Backups
+
+**Back up now** on the home page zips the whole `content/` folder and a
+consistent snapshot of the database into
+`~/Documents/law-school-backups/<YYYY-MM-DD_HH-MM-SS>.zip` and shows the path.
+The home page always shows when the last backup was made.
+
+The same backup runs automatically when the server starts (`npm run dev` or
+`npm start`) if the newest zip is more than 24 hours old or there is none. It
+is logged as `[backup] wrote …`. A failed automatic backup is logged and does
+not stop the app.
+
+To restore, unzip over the project: the archive holds `content/…` and
+`data/study.db`. Stop the app first so the database file is not in use.
+
+## Quick capture and inbox
+
+The **Capture** box in the header is on every page. Type raw in-class notes
+and press "Save to inbox" (or Ctrl/⌘+Enter). Each capture is stored in the
+database with a timestamp and belongs to no unit. The header shows how many
+are waiting.
+
+The **Inbox** page lists them, newest first. **File as note** opens the note
+form with the capture text in the body and lets you pick the course, unit, and
+note type; the topics checklist follows the chosen unit, and for a class note
+the date defaults to the capture's date. Saving writes the note file and marks
+the capture filed, which removes it from the inbox. **Discard** removes a
+capture without filing it. Nothing is deleted from the database either way;
+filed and discarded rows keep their timestamps.
+
 ## Flashcards
 
 There is no card authoring. Cards are generated from notes on every request:
@@ -355,6 +403,16 @@ calendar days in the machine's local time zone, so a card scheduled for
 tomorrow is due at midnight.
 
 The home page shows "Flashcards due today" per course with a review link.
+
+### Database schema (inbox)
+
+```sql
+captures (
+  id, text, created_at,
+  filed_at, filed_note_path,   -- set when filed as a note
+  discarded_at                 -- set when discarded
+)
+```
 
 ### Database schema (flashcards)
 
@@ -434,10 +492,24 @@ The **Gaps** page lists, per course:
 - **Retry and weak-tag tests go straight to the test** with all matching
   questions and 90 seconds each. Add `&count=N` or `&seconds=S` to the URL to
   change that.
+- **Course and unit slugs come from the title** with the same slugify rule as
+  note filenames, and creation refuses to touch an existing folder.
+- **Editing a unit also lets you change its order**, since it lives in the
+  same `unit.json` and the form would be odd without it.
+- **Backups snapshot the database through SQLite's backup API** rather than
+  copying the file, because WAL mode can leave recent writes in a side file.
+- **Backup staleness is judged by the newest zip's modification time** in the
+  backup folder, so a zip you copy in by hand counts.
+- **Filing or discarding a capture never deletes the row.** The inbox shows
+  only rows with neither `filed_at` nor `discarded_at`.
+- **Discard was added to the inbox** even though it was not asked for, since
+  an inbox with no way to drop a stray capture only grows.
+- **The capture box saves without leaving the page**; the header count
+  refreshes in place.
 
 ## Not built yet (schema left open)
 
-Quick-capture inbox, essay questions, file upload UI, search, auth, deployment.
+Essay questions, file upload UI, search, auth, deployment.
 
 ## Project layout
 
@@ -448,6 +520,9 @@ src/lib/content/          types, validators, loader (reads content/ per request)
                           writer (all disk writes), importer (paste validation)
 src/lib/slug.ts           slugify (pure, used by the note form in the browser)
 src/lib/weakTags.ts       tag miss rates and missed-question queries
+src/lib/captures.ts       quick-capture inbox queries
+src/lib/backup.ts         zip backups of content/ and the database
+src/instrumentation.ts    runs the stale-backup check at server start
 src/lib/testing.ts        shuffle and question-stripping for test runs
 src/lib/db.ts             SQLite connection + schema
 src/lib/attempts.ts       attempt queries
@@ -458,7 +533,8 @@ src/lib/gaps.ts           gaps computation
 src/app/                  pages (server components) and the server actions
                           (actions.ts for tests/review, content-actions.ts for writes)
 src/components/notes/     note card, one field template per type, note form
-src/components/ImportForm.tsx, EmphasisForm.tsx
+src/components/            ImportForm, EmphasisForm, CourseForm, UnitForm,
+                          TopicList, QuickCapture, UnitTable
 src/components/cards/     flashcard back, flip card, review card
 src/components/test/      the client-side test engine
 ```

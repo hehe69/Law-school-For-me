@@ -8,6 +8,9 @@ import { saveNoteAction, type NoteFormState } from "@/app/content-actions";
 import type { Note, NoteType } from "@/lib/content/types";
 import { slugify } from "@/lib/slug";
 
+export type UnitOption = { slug: string; title: string; syllabusTopics: string[]; existingSlugs: string[] };
+export type CourseOption = { slug: string; title: string; units: UnitOption[] };
+
 type Props = {
   courseSlug: string;
   unitSlug: string;
@@ -16,6 +19,10 @@ type Props = {
   existingSlugs: string[];
   /** When editing: the note to prefill */
   note?: Note;
+  /** When filing a capture: lets the user pick course and unit; courseSlug/unitSlug are then just the initial choice */
+  pickers?: CourseOption[];
+  /** Capture being filed: prefills the body and is marked filed on save */
+  capture?: { id: number; text: string; createdOn: string };
 };
 
 type Fields = Record<string, string>;
@@ -55,13 +62,29 @@ function initialFields(note?: Note): Fields {
   return out;
 }
 
-export default function NoteForm({ courseSlug, unitSlug, syllabusTopics, existingSlugs, note }: Props) {
+export default function NoteForm(props: Props) {
+  const { note, pickers, capture } = props;
   const [state, formAction, pending] = useActionState<NoteFormState, FormData>(saveNoteAction, { error: null });
   const [type, setType] = useState<NoteType>(note?.frontmatter.type ?? "case");
-  const [fields, setFields] = useState<Fields>(() => initialFields(note));
+  const [fields, setFields] = useState<Fields>(() => (capture ? { date: capture.createdOn } : initialFields(note)));
   const [topics, setTopics] = useState<Set<string>>(() => new Set(note?.topics ?? []));
-  const [body, setBody] = useState(note?.body ?? "");
+  const [body, setBody] = useState(capture?.text ?? note?.body ?? "");
+  const [courseSlug, setCourseSlug] = useState(props.courseSlug);
+  const [unitSlug, setUnitSlug] = useState(props.unitSlug);
   const editing = Boolean(note);
+
+  // With pickers, the unit's topics and existing filenames follow the current selection.
+  const pickedCourse = pickers?.find((c) => c.slug === courseSlug);
+  const pickedUnit = pickedCourse?.units.find((u) => u.slug === unitSlug);
+  const syllabusTopics = pickers ? (pickedUnit?.syllabusTopics ?? []) : props.syllabusTopics;
+  const existingSlugs = pickers ? (pickedUnit?.existingSlugs ?? []) : props.existingSlugs;
+
+  function pickCourse(slug: string) {
+    setCourseSlug(slug);
+    const first = pickers?.find((c) => c.slug === slug)?.units[0]?.slug ?? "";
+    setUnitSlug(first);
+    setTopics(new Set());
+  }
 
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setFields((f) => ({ ...f, [key]: e.target.value }));
@@ -77,6 +100,25 @@ export default function NoteForm({ courseSlug, unitSlug, syllabusTopics, existin
       <input type="hidden" name="course" value={courseSlug} />
       <input type="hidden" name="unit" value={unitSlug} />
       {editing && <input type="hidden" name="existingSlug" value={note!.slug} />}
+      {capture && <input type="hidden" name="captureId" value={capture.id} />}
+
+      {pickers && (
+        <div className="flex flex-wrap gap-4">
+          <label className="block">
+            <span className="font-medium">Course</span>
+            <select value={courseSlug} onChange={(e) => pickCourse(e.target.value)} className="mt-1 block rounded border border-gray-300 px-2 py-1">
+              {pickers.map((c) => <option key={c.slug} value={c.slug}>{c.title}</option>)}
+            </select>
+          </label>
+          <label className="block">
+            <span className="font-medium">Unit</span>
+            <select value={unitSlug} onChange={(e) => { setUnitSlug(e.target.value); setTopics(new Set()); }} className="mt-1 block rounded border border-gray-300 px-2 py-1">
+              {(pickedCourse?.units ?? []).map((u) => <option key={u.slug} value={u.slug}>{u.title}</option>)}
+            </select>
+          </label>
+          {!pickedUnit && <p className="self-end text-sm text-red-700">This course has no units yet.</p>}
+        </div>
+      )}
 
       <fieldset>
         <legend className="mb-1 font-medium">Type</legend>
@@ -135,8 +177,8 @@ export default function NoteForm({ courseSlug, unitSlug, syllabusTopics, existin
 
       {state.error && <p className="rounded border border-red-300 bg-red-50 p-2 text-sm text-red-800">{state.error}</p>}
 
-      <button type="submit" disabled={pending} className="rounded bg-blue-700 px-4 py-2 text-white disabled:opacity-50">
-        {pending ? "Saving…" : editing ? "Save changes" : "Create note"}
+      <button type="submit" disabled={pending || (Boolean(pickers) && !pickedUnit)} className="rounded bg-blue-700 px-4 py-2 text-white disabled:opacity-50">
+        {pending ? "Saving…" : editing ? "Save changes" : capture ? "File as note" : "Create note"}
       </button>
     </form>
   );
