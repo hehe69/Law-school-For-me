@@ -1,5 +1,10 @@
 {
   "title": "Adverse Possession (sample)",
   "order": 1,
-  "syllabusTopics": ["elements", "tacking", "Wisconsin statute"]
+  "syllabusTopics": [
+    "elements",
+    "tacking",
+    "Wisconsin statute"
+  ],
+  "emphasis": "PLACEHOLDER. The professor said the exam will test tacking and the Wisconsin statutory periods, not the history of the doctrine."
 }

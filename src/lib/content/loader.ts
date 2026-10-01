@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
 import type { ContentError, ContentTree, Course, Note, Question, Unit } from "./types";
-import { validateCourseJson, validateFrontmatter, validateQuestion, validateTopics, validateUnitJson } from "./validate";
+import { parseFrontmatter, validateCourseJson, validateQuestion, validateTopics, validateUnitJson } from "./validate";
 
 export const CONTENT_ROOT = path.join(process.cwd(), "content");
 
@@ -45,7 +45,7 @@ function loadNotes(unitDir: string, errors: ContentError[]): Note[] {
       errors.push({ path: rel(full), message: `could not parse frontmatter: ${(e as Error).message}` });
       continue;
     }
-    const result = validateFrontmatter(parsed.data);
+    const result = parseFrontmatter(parsed.data);
     if (!result.ok) {
       errors.push({ path: rel(full), message: result.problems.join("; ") });
       continue;
@@ -55,7 +55,15 @@ function loadNotes(unitDir: string, errors: ContentError[]): Note[] {
       errors.push({ path: rel(full), message: topics.problems.join("; ") });
       continue;
     }
-    notes.push({ slug: file.replace(/\.md$/, ""), path: rel(full), frontmatter: result.value, topics: topics.value, body: parsed.content.trim() });
+    notes.push({
+      slug: file.replace(/\.md$/, ""),
+      path: rel(full),
+      frontmatter: result.value,
+      status: result.missing.length ? "draft" : "complete",
+      missingFields: result.missing,
+      topics: topics.value,
+      body: parsed.content.trim(),
+    });
   }
   return notes;
 }
@@ -104,7 +112,17 @@ function loadUnit(courseSlug: string, courseDir: string, unitSlug: string, cours
   const errors: ContentError[] = [];
   const notes = loadNotes(unitDir, errors);
   const questions = loadQuestions(unitDir, courseSlug, unitSlug, errors);
-  return { slug: unitSlug, courseSlug, title: meta.title, order: meta.order, syllabusTopics: meta.syllabusTopics, notes, questions, errors };
+  return {
+    slug: unitSlug,
+    courseSlug,
+    title: meta.title,
+    order: meta.order,
+    syllabusTopics: meta.syllabusTopics,
+    emphasis: meta.emphasis,
+    notes,
+    questions,
+    errors,
+  };
 }
 
 function byOrder<T extends { order: number; title: string }>(a: T, b: T) {
@@ -176,20 +194,29 @@ export function findUnit(tree: ContentTree, courseSlug: string, unitSlug: string
 
 export const DEFAULT_SECONDS_PER_QUESTION = 90;
 
-export type Scope = "unit" | "upto" | "course";
+/** Scopes chosen on the test setup page; the pool is a set of units. */
+export type PoolScope = "unit" | "upto" | "course";
+/** Every scope an attempt can have. "tags" and "retry" tests are built from question ids, not units. */
+export type Scope = PoolScope | "tags" | "retry";
 
 export const SCOPE_LABELS: Record<Scope, string> = {
   unit: "This unit",
   upto: "All units up to this one",
   course: "Whole course",
+  tags: "Weakest tags",
+  retry: "Retry missed",
 };
 
-export function isScope(v: unknown): v is Scope {
+export function isPoolScope(v: unknown): v is PoolScope {
   return v === "unit" || v === "upto" || v === "course";
 }
 
+export function isScope(v: unknown): v is Scope {
+  return isPoolScope(v) || v === "tags" || v === "retry";
+}
+
 /** The pool of questions a test can draw from, in syllabus order. */
-export function questionsForScope(course: Course, unit: Unit, scope: Scope): Question[] {
+export function questionsForScope(course: Course, unit: Unit, scope: PoolScope): Question[] {
   const units =
     scope === "unit" ? [unit] : scope === "upto" ? course.units.filter((u) => u.order <= unit.order) : course.units;
   return units.flatMap((u) => u.questions);
@@ -204,6 +231,11 @@ export function findNoteByPath(tree: ContentTree, notePath: string): { course: C
     }
   }
   return undefined;
+}
+
+/** Every question in a course, in syllabus order. */
+export function courseQuestions(course: Course): Question[] {
+  return course.units.flatMap((u) => u.questions);
 }
 
 /** Look up a question by its stored identity; undefined if it has since been removed from content. */

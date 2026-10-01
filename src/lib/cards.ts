@@ -19,6 +19,7 @@ export type Card = {
 };
 
 export function cardFromNote(course: Course, unit: Unit, note: Note): Card | null {
+  if (note.status === "draft") return null;
   const fm = note.frontmatter;
   const base = {
     key: note.path,

@@ -50,7 +50,10 @@ export default function HomePage() {
 
       {tree.courses.map((course) => (
         <section key={course.slug} className="mb-8">
-          <h2 className="mb-2 text-xl font-semibold">{course.title}</h2>
+          <h2 className="mb-2 flex items-baseline gap-3 text-xl font-semibold">
+            {course.title}
+            <Link href={`/courses/${course.slug}/weak-tags`} className="text-sm font-normal text-blue-700 underline">Weak tags</Link>
+          </h2>
           {course.units.length === 0 ? (
             <p className="text-sm text-gray-600">No units yet.</p>
           ) : (
@@ -79,7 +82,12 @@ export default function HomePage() {
                           <span className="ml-2 text-xs text-red-700">{unit.errors.length} file problem(s)</span>
                         )}
                       </td>
-                      <td className="py-2 pr-2 text-right">{unit.notes.length}</td>
+                      <td className="py-2 pr-2 text-right">
+                        {unit.notes.length}
+                        {unit.notes.some((n) => n.status === "draft") && (
+                          <span className="ml-1 text-xs text-yellow-900">({unit.notes.filter((n) => n.status === "draft").length} draft)</span>
+                        )}
+                      </td>
                       <td className="py-2 pr-2 text-right">{unit.questions.length}</td>
                       <td className="py-2 pr-2 text-right">{formatScore(s?.bestScore ?? null)}</td>
                       <td className="py-2 pr-2">

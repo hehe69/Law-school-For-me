@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAttempt } from "@/lib/attempts";
 import { findQuestion, loadContent, SCOPE_LABELS } from "@/lib/content/loader";
+import { missedInAttempt } from "@/lib/weakTags";
 import { choiceLetter, formatDate, formatDuration, formatScore } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -14,8 +15,13 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
   if (!data) notFound();
   const { attempt, questions } = data;
   const tree = loadContent();
-  const base = `/courses/${attempt.course_slug}/units/${attempt.unit_slug}`;
-  const unitTitle = tree.courses.find((c) => c.slug === attempt.course_slug)?.units.find((u) => u.slug === attempt.unit_slug)?.title ?? attempt.unit_slug;
+  const course = tree.courses.find((c) => c.slug === attempt.course_slug);
+  const unit = course?.units.find((u) => u.slug === attempt.unit_slug);
+  // Weak-tag tests belong to the course, not a unit; their links go to the weak-tags page instead.
+  const base = unit ? `/courses/${attempt.course_slug}/units/${attempt.unit_slug}` : `/courses/${attempt.course_slug}/weak-tags`;
+  const parentTitle = unit?.title ?? (attempt.unit_slug || (course?.title ?? attempt.course_slug));
+  const missedIds = missedInAttempt(attempt.id);
+  const retryHref = `/courses/${attempt.course_slug}/test/run?scope=retry${unit ? `&unit=${unit.slug}` : ""}&ids=${encodeURIComponent(missedIds.join(","))}`;
 
   const shown = wrongOnly ? questions.filter((q) => !q.is_correct) : questions;
   const wrongCount = questions.filter((q) => !q.is_correct).length;
@@ -23,8 +29,13 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
   return (
     <div>
       <p className="mb-1 text-sm text-gray-600">
-        <Link href="/" className="underline">Courses</Link> / <Link href={base} className="underline">{unitTitle}</Link> /{" "}
-        <Link href={`${base}/history`} className="underline">History</Link>
+        <Link href="/" className="underline">Courses</Link> / <Link href={base} className="underline">{parentTitle}</Link>
+        {unit && (
+          <>
+            {" / "}
+            <Link href={`${base}/history`} className="underline">History</Link>
+          </>
+        )}
       </p>
       <h1 className="mb-4 text-2xl font-semibold">Results</h1>
 
@@ -52,8 +63,13 @@ export default async function AttemptPage({ params, searchParams }: PageProps<"/
         <Link href={`/attempts/${attempt.id}?filter=wrong`} className={wrongOnly ? "font-semibold" : "underline"}>
           Wrong only ({wrongCount})
         </Link>
-        <Link href={`${base}/test`} className="ml-auto rounded border border-gray-300 px-3 py-1">
-          Take another test
+        {missedIds.length > 0 && (
+          <Link href={retryHref} className="ml-auto rounded border border-red-300 px-3 py-1 text-red-800">
+            Retry wrong ({missedIds.length})
+          </Link>
+        )}
+        <Link href={unit ? `${base}/test` : base} className={`rounded border border-gray-300 px-3 py-1 ${missedIds.length > 0 ? "" : "ml-auto"}`}>
+          {unit ? "Take another test" : "Back to weak tags"}
         </Link>
       </div>
 

@@ -1,9 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { DEFAULT_SECONDS_PER_QUESTION, findUnit, loadContent, questionsForScope, SCOPE_LABELS, type Scope } from "@/lib/content/loader";
+import { DEFAULT_SECONDS_PER_QUESTION, findUnit, loadContent, questionsForScope, type PoolScope } from "@/lib/content/loader";
 
 export const dynamic = "force-dynamic";
 
+const POOL_LABELS: Record<PoolScope, string> = {
+  unit: "This unit",
+  upto: "All units up to this one",
+  course: "Whole course",
+};
 
 export default async function TestSetupPage({ params }: PageProps<"/courses/[course]/units/[unit]/test">) {
   const { course: courseSlug, unit: unitSlug } = await params;
@@ -11,9 +16,9 @@ export default async function TestSetupPage({ params }: PageProps<"/courses/[cou
   if (!found) notFound();
   const { course, unit } = found;
   const base = `/courses/${course.slug}/units/${unit.slug}`;
-  const scopes = (Object.keys(SCOPE_LABELS) as Scope[]).map((scope) => ({
+  const scopes = (["unit", "upto", "course"] as PoolScope[]).map((scope) => ({
     scope,
-    label: SCOPE_LABELS[scope],
+    label: POOL_LABELS[scope],
     count: questionsForScope(course, unit, scope).length,
   }));
   const maxCount = Math.max(...scopes.map((s) => s.count));

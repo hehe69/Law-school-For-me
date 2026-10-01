@@ -1,9 +1,10 @@
 # Law Study
 
 A local, single-user study app: a unit-based digital textbook with LSAC-style
-timed practice tests, auto-generated flashcards with spaced repetition, and a
-gaps view. Content lives on disk as markdown and JSON that you edit directly.
-Test attempts and flashcard progress are stored in a local SQLite file.
+timed practice tests, auto-generated flashcards with spaced repetition, a gaps
+view, and weak-tag tracking. Content lives on disk as markdown and JSON that
+you can edit directly or through the in-app forms. Test attempts and flashcard
+progress are stored in a local SQLite file.
 
 No auth, no hosting, no AI features.
 
@@ -72,15 +73,28 @@ Create `content/<course-slug>/<unit-slug>/unit.json`:
 `order` is the unit's place in the syllabus. It also drives the "all units up
 to this one" test scope. `syllabusTopics` is optional.
 
+An optional `"emphasis"` string holds what the professor stressed for the
+unit. The unit page shows it in a callout above the notes and has a box to
+edit it, which writes back to `unit.json` keeping every other key.
+
 ### Add a note
 
 Create `content/<course>/<unit>/notes/<anything>.md`. Every note has YAML
 frontmatter with a `type` and the fixed fields for that type. Text below the
 frontmatter is optional free-form markdown.
 
-All fields are required. Lists may be empty (`[]`). Notes are grouped by type
-on the unit page (Rules, Cases, Class notes) and sorted by filename within a
-group, so prefix filenames if you care about order.
+Every type has fixed fields (listed below). Lists may be empty (`[]`). A note
+whose fields are all present is **complete**. A note with a field missing or
+empty is loaded as a **draft**: it still shows on the unit page with a yellow
+"Draft" badge and the names of the missing fields, but it makes no flashcard.
+A field of the wrong shape (for example `elements: "text"` instead of a list)
+is still a content error and the file is skipped.
+
+Notes are grouped by type on the unit page (Rules, Cases, Class notes) and
+sorted by filename within a group, so prefix filenames if you care about order.
+
+You can also create and edit notes in the app: "New note" on a unit page, and
+"Edit" on every note card. See **Note form** below.
 
 Any note type may also carry an optional `topics` list naming the syllabus
 topics (from the unit's `unit.json`) that the note covers. The Gaps view uses
@@ -169,7 +183,8 @@ Create `content/<course>/<unit>/questions.json` as a JSON array:
   questions from every unit. Attempts store the id, so do not reuse an id for a
   different question later.
 
-Multiple choice only for now.
+Multiple choice only for now. Hand-written files may have 2 or more choices;
+the in-app importer insists on exactly 5 (see **Importing questions**).
 
 ### Malformed files
 
@@ -183,7 +198,8 @@ questions are skipped without dropping the rest of the file.
 From a unit page, "Start test" opens setup:
 
 - **Scope**: this unit, all units up to this one (by `order`), or the whole
-  course.
+  course. Two more scopes exist that are not chosen here: "Weakest tags" and
+  "Retry missed" (see below).
 - **Number of questions**: defaults to all in scope, capped at what the scope
   has.
 - **Seconds per question**: default 90. Total time = count × seconds.
@@ -230,6 +246,76 @@ attempt_questions (
 Per-question correctness and tags are stored so weak-tag reports can be
 computed later without re-reading old content.
 
+## Importing questions
+
+"Import questions" on a unit page opens a textarea. Paste a JSON array in the
+question schema above and choose what happens on success:
+
+- **Append** adds the questions to the unit's existing `questions.json`.
+- **Replace** overwrites `questions.json` with just the pasted questions (the
+  current ones are deleted).
+
+The importer checks every question and lists each problem with its index in the
+paste (`[2] "answer" is 5; it must be from 0 to 4`). Rules:
+
+- `id`, `stem`, `explanation` are non-empty text.
+- `choices` has exactly 5 non-empty strings.
+- `answer` is a whole number from 0 to 4.
+- `tags`, if present, is a list of strings.
+- `id` is new within the whole course (in Replace mode the unit's own current
+  ids may be reused) and not repeated inside the paste.
+
+Nothing is written unless every question passes and the resulting file would
+load cleanly. In Append mode, if the existing file has invalid entries the
+import refuses rather than appending onto a broken file. The textarea keeps
+your paste when there are errors.
+
+## Note form
+
+"New note" on a unit page opens a form. Pick the type (case, rule, class) and
+the fields switch to match. Elements and exceptions are entered one per line.
+Topics is a checklist of the unit's `syllabusTopics`. The body is optional
+markdown.
+
+The filename is derived from the name: "Van Valkenburgh v. Lutz" becomes
+`notes/van-valkenburgh-v-lutz.md`. Class notes use the date and topic, giving
+`notes/2026-09-15-tacking-and-privity.md`. The form shows the filename as you
+type and warns if it already exists; saving over an existing note from "New
+note" is refused.
+
+"Edit" on a note card opens the same form prefilled. Editing never renames the
+file (that would reset the note's flashcard progress), and any extra frontmatter
+keys you wrote by hand are kept.
+
+Fields may be left empty. The note is written with `""` for those fields and
+shows as a draft until you fill them in, either in the form or in the file.
+
+## Weak tags
+
+"Weak tags" (linked from the home page and every unit page) lists, per course,
+every tag seen in your attempts with how many times questions carrying it were
+seen, missed, and the miss rate. Unanswered counts as missed. Tags come from
+the snapshot stored with each attempt, so renaming a tag in content starts a
+new row. The table also shows how many questions currently carry each tag.
+
+"Test weakest tags" starts a test from every question in the course carrying
+any of the three worst tags (highest miss rate, ties broken by misses then
+seen; tags no longer used by any question are skipped). The test uses all
+matching questions at 90 seconds each. Its attempts belong to the course rather
+than a unit, so they appear on the weak-tags page under "Recent weak-tag
+tests" and not in any unit's history or home-page stats.
+
+## Retry missed
+
+- On any results page, **Retry wrong (N)** starts a new test from the questions
+  you missed in that attempt.
+- On a unit page, **Retry all missed (N)** starts a test from every question in
+  that unit you have ever missed, in any attempt.
+
+Both use all matching questions at 90 seconds each and are stored with scope
+"Retry missed". A retry started from a unit page or from a unit's results shows
+in that unit's history. Questions removed from content since are skipped.
+
 ## Flashcards
 
 There is no card authoring. Cards are generated from notes on every request:
@@ -239,8 +325,8 @@ There is no card authoring. Cards are generated from notes on every request:
 | `rule`    | `name`      | `ruleStatement`, `elements`, `exceptions`, `wisconsinVariation` |
 | `case`    | `name`      | `rule`, `holding`                                         |
 
-Class notes do not make cards. Each unit page links to "Flashcards (N)", a
-browse page where you click a card to flip it.
+Class notes and draft notes do not make cards. Each unit page links to
+"Flashcards (N)", a browse page where you click a card to flip it.
 
 A card's identity is the note's path under `content/`, for example
 `property/adverse-possession/notes/elements.md`. Renaming or moving a note
@@ -329,18 +415,40 @@ The **Gaps** page lists, per course:
   state on the review page is whether the back is revealed.
 - **Stale-unit activity counts both tests and reviews.** A unit with cards
   reviewed recently is not stale even if it has not been tested.
+- **The importer is stricter than the loader.** Hand-written files with 4
+  choices still load; pasted questions must have exactly 5, as asked. The
+  loader's leniency keeps files you have already written working.
+- **Drafts are not errors.** Missing or empty fields make a draft; a field of
+  the wrong shape is still an error, since that usually means a YAML mistake.
+- **Drafts still count toward topic coverage** in the Gaps view. A draft is a
+  note that exists; the badge is the reminder to finish it.
+- **Edit never renames a note file.** Flashcard progress is keyed by path.
+- **Every in-app write is atomic** (temp file + rename) and paths are built only
+  from validated slugs, so a crash mid-write cannot leave a half file.
+- **Form line endings are normalised to LF** before writing, since browsers
+  submit CRLF.
+- **Weak-tag tests belong to the course, not a unit.** They are listed on the
+  weak-tags page instead of a unit's history.
+- **"Retry all missed" means this unit's questions**, missed in any attempt,
+  including course-wide tests started from another unit.
+- **Retry and weak-tag tests go straight to the test** with all matching
+  questions and 90 seconds each. Add `&count=N` or `&seconds=S` to the URL to
+  change that.
 
 ## Not built yet (schema left open)
 
-Quick-capture inbox, weak-tags report (per-question tags are already stored
-for it), essay questions, file upload UI, search, auth, deployment.
+Quick-capture inbox, essay questions, file upload UI, search, auth, deployment.
 
 ## Project layout
 
 ```
 content/                  your notes and questions
 data/study.db             attempts (created on first run, gitignored)
-src/lib/content/          types, validators, loader (reads content/ per request)
+src/lib/content/          types, validators, loader (reads content/ per request),
+                          writer (all disk writes), importer (paste validation)
+src/lib/slug.ts           slugify (pure, used by the note form in the browser)
+src/lib/weakTags.ts       tag miss rates and missed-question queries
+src/lib/testing.ts        shuffle and question-stripping for test runs
 src/lib/db.ts             SQLite connection + schema
 src/lib/attempts.ts       attempt queries
 src/lib/cards.ts          flashcards derived from notes
@@ -348,7 +456,9 @@ src/lib/sm2.ts            SM-2 scheduling (pure functions)
 src/lib/reviews.ts        due queue and card state persistence
 src/lib/gaps.ts           gaps computation
 src/app/                  pages (server components) and the server actions
-src/components/notes/     one template per note type
+                          (actions.ts for tests/review, content-actions.ts for writes)
+src/components/notes/     note card, one field template per type, note form
+src/components/ImportForm.tsx, EmphasisForm.tsx
 src/components/cards/     flashcard back, flip card, review card
 src/components/test/      the client-side test engine
 ```

@@ -36,11 +36,17 @@ export type ClassNote = {
 export type NoteFrontmatter = CaseNote | RuleNote | ClassNote;
 export type NoteType = NoteFrontmatter["type"];
 
+export type NoteStatus = "complete" | "draft";
+
 export type Note = {
   /** File name without .md */
   slug: string;
   path: string;
   frontmatter: NoteFrontmatter;
+  /** "draft" when any fixed field for the type is missing or empty. Drafts render with a badge and make no flashcards. */
+  status: NoteStatus;
+  /** Names of the fixed fields that are missing or empty */
+  missingFields: string[];
   /** Optional syllabus topics this note covers (frontmatter "topics"), used by the Gaps view */
   topics: string[];
   /** Markdown below the frontmatter, may be empty */
@@ -64,6 +70,8 @@ export type Unit = {
   title: string;
   order: number;
   syllabusTopics: string[];
+  /** Free text from unit.json "emphasis": what the professor stressed. Empty when unset. */
+  emphasis: string;
   notes: Note[];
   questions: Question[];
   /** Errors scoped to this unit (bad note, bad question) */

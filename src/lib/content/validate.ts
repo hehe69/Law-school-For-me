@@ -30,62 +30,94 @@ function normaliseDate(v: unknown): string | null {
   return null;
 }
 
-export function validateFrontmatter(
+/** A string field that may be missing (draft) but, when present, must be a string. */
+function optString(obj: Record<string, unknown>, key: string, problems: Problems, missing: string[]): string {
+  const v = obj[key];
+  if (v === undefined || v === null || (typeof v === "string" && v.trim() === "")) {
+    missing.push(key);
+    return "";
+  }
+  if (typeof v !== "string") {
+    problems.push(`"${key}" must be a string`);
+    return "";
+  }
+  return v;
+}
+
+/** A list field that may be missing (draft) but, when present, must be a list of strings. [] counts as present. */
+function optStringList(obj: Record<string, unknown>, key: string, problems: Problems, missing: string[]): string[] {
+  const v = obj[key];
+  if (v === undefined || v === null) {
+    missing.push(key);
+    return [];
+  }
+  if (!Array.isArray(v) || !v.every((x) => typeof x === "string")) {
+    problems.push(`"${key}" must be a list of strings (use [] for none)`);
+    return [];
+  }
+  return v;
+}
+
+export const NOTE_FIELDS: Record<NoteFrontmatter["type"], string[]> = {
+  case: ["name", "facts", "issue", "rule", "holding", "whyItMatters"],
+  rule: ["name", "ruleStatement", "elements", "exceptions", "wisconsinVariation"],
+  class: ["date", "topic", "professorPoint", "modifiesRule"],
+};
+
+/**
+ * Parse a note's frontmatter. The type must be valid and every present field must have the
+ * right shape; fields that are absent or empty are reported in `missing` and make the note a draft.
+ */
+export function parseFrontmatter(
   raw: unknown,
-): { ok: true; value: NoteFrontmatter } | { ok: false; problems: Problems } {
+): { ok: true; value: NoteFrontmatter; missing: string[] } | { ok: false; problems: Problems } {
   if (!isRecord(raw)) return { ok: false, problems: ["frontmatter is missing or not a mapping"] };
   const problems: Problems = [];
+  const missing: string[] = [];
   const type = raw.type;
 
   if (type === "case") {
-    for (const k of ["name", "facts", "issue", "rule", "holding", "whyItMatters"]) requireString(raw, k, problems);
-    if (problems.length) return { ok: false, problems };
-    return {
-      ok: true,
-      value: {
-        type: "case",
-        name: raw.name as string,
-        facts: raw.facts as string,
-        issue: raw.issue as string,
-        rule: raw.rule as string,
-        holding: raw.holding as string,
-        whyItMatters: raw.whyItMatters as string,
-      },
+    const value: NoteFrontmatter = {
+      type: "case",
+      name: optString(raw, "name", problems, missing),
+      facts: optString(raw, "facts", problems, missing),
+      issue: optString(raw, "issue", problems, missing),
+      rule: optString(raw, "rule", problems, missing),
+      holding: optString(raw, "holding", problems, missing),
+      whyItMatters: optString(raw, "whyItMatters", problems, missing),
     };
+    return problems.length ? { ok: false, problems } : { ok: true, value, missing };
   }
 
   if (type === "rule") {
-    for (const k of ["name", "ruleStatement", "wisconsinVariation"]) requireString(raw, k, problems);
-    for (const k of ["elements", "exceptions"]) requireStringList(raw, k, problems);
-    if (problems.length) return { ok: false, problems };
-    return {
-      ok: true,
-      value: {
-        type: "rule",
-        name: raw.name as string,
-        ruleStatement: raw.ruleStatement as string,
-        elements: raw.elements as string[],
-        exceptions: raw.exceptions as string[],
-        wisconsinVariation: raw.wisconsinVariation as string,
-      },
+    const value: NoteFrontmatter = {
+      type: "rule",
+      name: optString(raw, "name", problems, missing),
+      ruleStatement: optString(raw, "ruleStatement", problems, missing),
+      elements: optStringList(raw, "elements", problems, missing),
+      exceptions: optStringList(raw, "exceptions", problems, missing),
+      wisconsinVariation: optString(raw, "wisconsinVariation", problems, missing),
     };
+    return problems.length ? { ok: false, problems } : { ok: true, value, missing };
   }
 
   if (type === "class") {
-    const date = normaliseDate(raw.date);
-    if (!date) problems.push(`"date" must be a date in YYYY-MM-DD form`);
-    for (const k of ["topic", "professorPoint", "modifiesRule"]) requireString(raw, k, problems);
-    if (problems.length || !date) return { ok: false, problems };
-    return {
-      ok: true,
-      value: {
-        type: "class",
-        date,
-        topic: raw.topic as string,
-        professorPoint: raw.professorPoint as string,
-        modifiesRule: raw.modifiesRule as string,
-      },
+    let date = "";
+    if (raw.date === undefined || raw.date === null || raw.date === "") {
+      missing.push("date");
+    } else {
+      const d = normaliseDate(raw.date);
+      if (d) date = d;
+      else problems.push(`"date" must be a date in YYYY-MM-DD form`);
+    }
+    const value: NoteFrontmatter = {
+      type: "class",
+      date,
+      topic: optString(raw, "topic", problems, missing),
+      professorPoint: optString(raw, "professorPoint", problems, missing),
+      modifiesRule: optString(raw, "modifiesRule", problems, missing),
     };
+    return problems.length ? { ok: false, problems } : { ok: true, value, missing };
   }
 
   return { ok: false, problems: [`"type" must be one of: case, rule, class (got ${JSON.stringify(type)})`] };
@@ -150,17 +182,19 @@ export function validateCourseJson(raw: unknown): { ok: true; title: string; ord
 
 export function validateUnitJson(
   raw: unknown,
-): { ok: true; title: string; order: number; syllabusTopics: string[] } | { ok: false; problems: Problems } {
+): { ok: true; title: string; order: number; syllabusTopics: string[]; emphasis: string } | { ok: false; problems: Problems } {
   if (!isRecord(raw)) return { ok: false, problems: ["unit.json must be an object"] };
   const problems: Problems = [];
   requireString(raw, "title", problems);
   if (typeof raw.order !== "number") problems.push(`"order" must be a number`);
   if (raw.syllabusTopics !== undefined) requireStringList(raw, "syllabusTopics", problems);
+  if (raw.emphasis !== undefined && raw.emphasis !== null && typeof raw.emphasis !== "string") problems.push(`"emphasis" must be a string`);
   if (problems.length) return { ok: false, problems };
   return {
     ok: true,
     title: raw.title as string,
     order: raw.order as number,
     syllabusTopics: (raw.syllabusTopics as string[] | undefined) ?? [],
+    emphasis: typeof raw.emphasis === "string" ? raw.emphasis : "",
   };
 }
