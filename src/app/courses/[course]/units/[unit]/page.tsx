@@ -2,9 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import ContentErrors from "@/components/ContentErrors";
 import NoteCard from "@/components/notes/NoteCard";
-import { findUnit, loadContent } from "@/lib/content/loader";
+import { activeQuestions, findUnit, loadContent } from "@/lib/content/loader";
 import type { NoteType } from "@/lib/content/types";
 import EmphasisForm from "@/components/EmphasisForm";
+import ConfirmButton from "@/components/ConfirmButton";
+import { deleteQuestionAction, toggleQuestionAction, uploadReadingsAction } from "@/app/content-actions";
+import { fileUrl } from "@/lib/content/loader";
 import { listAttemptsForUnit } from "@/lib/attempts";
 import { cardsForUnit } from "@/lib/cards";
 import { missedQuestionIds } from "@/lib/weakTags";
@@ -19,8 +22,9 @@ const GROUPS: { type: NoteType; heading: string }[] = [
   { type: "class", heading: "Class notes" },
 ];
 
-export default async function UnitPage({ params }: PageProps<"/courses/[course]/units/[unit]">) {
+export default async function UnitPage({ params, searchParams }: PageProps<"/courses/[course]/units/[unit]">) {
   const { course: courseSlug, unit: unitSlug } = await params;
+  const sp = await searchParams;
   const tree = loadContent();
   const found = findUnit(tree, courseSlug, unitSlug);
   if (!found) notFound();
@@ -31,7 +35,8 @@ export default async function UnitPage({ params }: PageProps<"/courses/[course]/
   const inUnit = new Set(unit.questions.map((q) => q.id));
   const missed = missedQuestionIds(course.slug, unit.slug).filter((id) => inUnit.has(id));
   const draftCount = unit.notes.filter((n) => n.status === "draft").length;
-  const byType = countByType(unit.questions);
+  const byType = countByType(activeQuestions(unit));
+  const disabledCount = unit.questions.filter((q) => q.disabled).length;
 
   return (
     <div>
@@ -51,8 +56,9 @@ export default async function UnitPage({ params }: PageProps<"/courses/[course]/
         <span>
           <strong>{byType.mc}</strong> multiple choice
           {byType.issue > 0 && <>, <strong>{byType.issue}</strong> issue</>}
+          {disabledCount > 0 && <span className="text-gray-500"> ({disabledCount} disabled)</span>}
         </span>
-        {unit.questions.length > 0 ? (
+        {byType.mc + byType.issue > 0 ? (
           <Link href={`${base}/test`} className="rounded bg-blue-700 px-4 py-2 text-white">
             Start test
           </Link>
@@ -113,6 +119,75 @@ export default async function UnitPage({ params }: PageProps<"/courses/[course]/
           </section>
         );
       })}
+
+      <section id="readings" className="mb-8">
+        <h2 className="mb-3 border-b border-gray-300 pb-1 text-xl font-semibold">
+          Readings <span className="text-base font-normal text-gray-500">({unit.readings.length})</span>
+        </h2>
+        {typeof sp.uploaded === "string" && <p className="mb-2 text-sm text-green-800">Uploaded: {sp.uploaded}</p>}
+        {typeof sp.skipped === "string" && <p className="mb-2 text-sm text-red-700">Skipped (not a PDF or too large): {sp.skipped}</p>}
+        {unit.readings.length === 0 ? (
+          <p className="mb-3 text-sm text-gray-600">No PDFs yet. Upload below or drop files into <code className="font-mono">content/{course.slug}/{unit.slug}/readings/</code>.</p>
+        ) : (
+          <ul className="mb-3 space-y-1 text-sm">
+            {unit.readings.map((r) => (
+              <li key={r.file} className="flex items-center gap-3">
+                <Link href={`${base}/readings/${encodeURIComponent(r.file)}`} className="text-blue-700 underline">{r.file}</Link>
+                <span className="text-gray-500">{(r.bytes / 1024 / 1024).toFixed(1)} MB</span>
+                <a href={fileUrl(course.slug, unit.slug, `readings/${r.file}`)} target="_blank" rel="noopener" className="text-xs text-gray-500 underline">raw</a>
+              </li>
+            ))}
+          </ul>
+        )}
+        <form action={uploadReadingsAction} className="flex flex-wrap items-center gap-2 text-sm">
+          <input type="hidden" name="course" value={course.slug} />
+          <input type="hidden" name="unit" value={unit.slug} />
+          <input type="file" name="files" accept=".pdf,application/pdf" multiple required className="text-sm" />
+          <button type="submit" className="rounded border border-gray-300 px-3 py-1">Upload PDF</button>
+        </form>
+      </section>
+
+      <section id="questions" className="mb-8">
+        <h2 className="mb-3 border-b border-gray-300 pb-1 text-xl font-semibold">
+          Questions <span className="text-base font-normal text-gray-500">({unit.questions.length})</span>
+        </h2>
+        {unit.questions.length === 0 ? (
+          <p className="text-sm text-gray-600">None yet. <Link href={`${base}/import`} className="underline">Import questions</Link>.</p>
+        ) : (
+          <ul className="space-y-2 text-sm">
+            {unit.questions.map((q) => (
+              <li key={q.id} id={`question-${q.id}`} className={`flex flex-wrap items-start gap-3 rounded border p-3 ${q.disabled ? "border-gray-200 bg-gray-50 text-gray-500" : "border-gray-200"}`}>
+                <div className="min-w-0 flex-1">
+                  <p className="mb-1">
+                    <code className="font-mono">{q.id}</code>
+                    <span className="ml-2 rounded bg-gray-100 px-1.5 text-xs">{q.type === "mc" ? "multiple choice" : `issue · ${q.issues.length} issues · ${q.minutes} min`}</span>
+                    {q.disabled && <span className="ml-2 rounded bg-yellow-100 px-1.5 text-xs text-yellow-900">disabled</span>}
+                    {q.image && <span className="ml-2 text-xs text-gray-500">image</span>}
+                  </p>
+                  <p className="line-clamp-2">{q.type === "mc" ? q.stem : q.factPattern}</p>
+                  {q.tags.length > 0 && <p className="mt-1 text-xs text-gray-500">{q.tags.join(" · ")}</p>}
+                </div>
+                <div className="flex shrink-0 items-center gap-2 text-xs">
+                  <Link href={`${base}/questions/${encodeURIComponent(q.id)}/edit`} className="rounded border border-gray-300 px-2 py-0.5">Edit</Link>
+                  <form action={toggleQuestionAction}>
+                    <input type="hidden" name="course" value={course.slug} />
+                    <input type="hidden" name="unit" value={unit.slug} />
+                    <input type="hidden" name="id" value={q.id} />
+                    <input type="hidden" name="disabled" value={q.disabled ? "false" : "true"} />
+                    <button type="submit" className="rounded border border-gray-300 px-2 py-0.5">{q.disabled ? "Enable" : "Disable"}</button>
+                  </form>
+                  <form action={deleteQuestionAction}>
+                    <input type="hidden" name="course" value={course.slug} />
+                    <input type="hidden" name="unit" value={unit.slug} />
+                    <input type="hidden" name="id" value={q.id} />
+                    <ConfirmButton message={`Delete question ${q.id} from questions.json? Past attempts keep their record.`} className="rounded border border-red-300 px-2 py-0.5 text-red-800">Delete</ConfirmButton>
+                  </form>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

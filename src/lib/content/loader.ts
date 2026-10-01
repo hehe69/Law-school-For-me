@@ -4,7 +4,27 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
-import type { ContentError, ContentTree, Course, Note, Question, Unit } from "./types";
+import type { ContentError, ContentTree, Course, Note, Question, Reading, Unit } from "./types";
+
+export const IMAGE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"]);
+
+function listFiles(dir: string, keep: (name: string) => boolean): string[] {
+  if (!fs.existsSync(dir)) return [];
+  return fs
+    .readdirSync(dir, { withFileTypes: true })
+    .filter((d) => d.isFile() && !d.name.startsWith(".") && keep(d.name))
+    .map((d) => d.name)
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function loadReadings(unitDir: string): Reading[] {
+  const dir = path.join(unitDir, "readings");
+  return listFiles(dir, (n) => n.toLowerCase().endsWith(".pdf")).map((file) => ({ file, bytes: fs.statSync(path.join(dir, file)).size }));
+}
+
+function loadImages(unitDir: string): string[] {
+  return listFiles(path.join(unitDir, "images"), (n) => IMAGE_EXTENSIONS.has(path.extname(n).toLowerCase()));
+}
 import { parseFrontmatter, validateCourseJson, validateQuestion, validateTopics, validateUnitJson } from "./validate";
 
 export const CONTENT_ROOT = path.join(process.cwd(), "content");
@@ -112,6 +132,12 @@ function loadUnit(courseSlug: string, courseDir: string, unitSlug: string, cours
   const errors: ContentError[] = [];
   const notes = loadNotes(unitDir, errors);
   const questions = loadQuestions(unitDir, courseSlug, unitSlug, errors);
+  const images = loadImages(unitDir);
+  for (const q of questions) {
+    if (q.image && !images.includes(q.image.slice("images/".length))) {
+      errors.push({ path: `${courseSlug}/${unitSlug}/questions.json`, message: `question "${q.id}": image "${q.image}" is not in the unit's images folder (the question still loads)` });
+    }
+  }
   return {
     slug: unitSlug,
     courseSlug,
@@ -121,6 +147,8 @@ function loadUnit(courseSlug: string, courseDir: string, unitSlug: string, cours
     emphasis: meta.emphasis,
     notes,
     questions,
+    readings: loadReadings(unitDir),
+    images,
     errors,
   };
 }
@@ -161,7 +189,7 @@ export function loadContent(): ContentTree {
       }
     }
     units.sort(byOrder);
-    courses.push({ slug: courseSlug, title: meta.title, order: meta.order, units });
+    courses.push({ slug: courseSlug, title: meta.title, order: meta.order, examDate: meta.examDate, units });
   }
 
   courses.sort(byOrder);
@@ -231,11 +259,21 @@ export function isScope(v: unknown): v is Scope {
   return isPoolScope(v) || v === "tags" || v === "retry";
 }
 
-/** The pool of questions a test can draw from, in syllabus order. */
+/** Questions that can appear in tests: everything not marked disabled. */
+export function activeQuestions(unit: Unit): Question[] {
+  return unit.questions.filter((q) => !q.disabled);
+}
+
+/** The pool of questions a test can draw from, in syllabus order. Disabled questions are left out. */
 export function questionsForScope(course: Course, unit: Unit, scope: PoolScope): Question[] {
   const units =
     scope === "unit" ? [unit] : scope === "upto" ? course.units.filter((u) => u.order <= unit.order) : course.units;
-  return units.flatMap((u) => u.questions);
+  return units.flatMap(activeQuestions);
+}
+
+/** URL at which a file under a unit's readings/ or images/ folder is served. */
+export function fileUrl(courseSlug: string, unitSlug: string, relPath: string): string {
+  return `/files/${courseSlug}/${unitSlug}/${relPath.split("/").map(encodeURIComponent).join("/")}`;
 }
 
 /** A rule note in this course by content-relative path (drafts included), or undefined. */
@@ -258,9 +296,9 @@ export function findNoteByPath(tree: ContentTree, notePath: string): { course: C
   return undefined;
 }
 
-/** Every question in a course, in syllabus order. */
+/** Every test-eligible question in a course, in syllabus order. */
 export function courseQuestions(course: Course): Question[] {
-  return course.units.flatMap((u) => u.questions);
+  return course.units.flatMap(activeQuestions);
 }
 
 /** Look up a question by its stored identity; undefined if it has since been removed from content. */

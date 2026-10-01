@@ -8,8 +8,8 @@ import { submitAttempt } from "@/app/actions";
 import { choiceLetter, formatDuration } from "@/lib/format";
 
 export type RunnerQuestion =
-  | { kind: "mc"; id: string; courseSlug: string; unitSlug: string; stem: string; choices: string[] }
-  | { kind: "issue"; id: string; courseSlug: string; unitSlug: string; factPattern: string; minutes: number };
+  | { kind: "mc"; id: string; courseSlug: string; unitSlug: string; stem: string; choices: string[]; imageUrl?: string }
+  | { kind: "issue"; id: string; courseSlug: string; unitSlug: string; factPattern: string; minutes: number; imageUrl?: string };
 
 /** Multiple-choice answers are a choice index; issue answers are the written text. */
 type Answer = number | string | null;
@@ -110,6 +110,36 @@ export default function TestRunner(props: Props) {
     return () => window.removeEventListener("beforeunload", handler);
   }, []);
 
+  // Keyboard shortcuts. Off while typing in the issue editor (or any input), and while the dialog is open
+  // except for Enter/Escape to confirm or cancel.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null;
+      const typing = target && (target.tagName === "TEXTAREA" || target.tagName === "INPUT" || target.isContentEditable);
+      if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
+      if (confirming) {
+        if (e.key === "Enter") { e.preventDefault(); void submit(false); }
+        if (e.key === "Escape") setConfirming(false);
+        return;
+      }
+      const current = questions[index];
+      if (e.key >= "1" && e.key <= "5" && current.kind === "mc") {
+        const ci = Number(e.key) - 1;
+        if (ci < current.choices.length) { e.preventDefault(); choose(ci); }
+      } else if (e.key === "f" || e.key === "F") {
+        e.preventDefault(); toggleFlag();
+      } else if (e.key === "ArrowLeft") {
+        if (index > 0) setIndex(index - 1);
+      } else if (e.key === "ArrowRight") {
+        if (index < questions.length - 1) setIndex(index + 1);
+      } else if (e.key === "Enter" && index === questions.length - 1 && !submitting) {
+        e.preventDefault(); setConfirming(true);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   const q = questions[index];
   const unansweredCount = answers.filter((a) => !isAnswered(a)).length;
   const mcCount = questions.filter((x) => x.kind === "mc").length;
@@ -159,6 +189,10 @@ export default function TestRunner(props: Props) {
           </button>
         </div>
 
+        {q.imageUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={q.imageUrl} alt="" className="mb-3 max-h-96 max-w-full rounded border border-gray-200" />
+        )}
         {q.kind === "issue" ? (
           <>
             <p className="mb-3 whitespace-pre-line rounded border border-gray-200 bg-gray-50 p-3">{q.factPattern}</p>
@@ -241,6 +275,14 @@ export default function TestRunner(props: Props) {
           <li><span className="mr-1 inline-block h-3 w-3 rounded border border-gray-400 bg-white align-middle" /> unanswered ({unansweredCount})</li>
           <li><span className="mr-1 inline-block h-3 w-3 rounded border border-gray-400 bg-white ring-2 ring-yellow-400 align-middle" /> flagged ({flaggedCount})</li>
         </ul>
+        <dl className="mt-4 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs text-gray-600">
+          <dt className="font-mono">1–5</dt><dd>choose A–E</dd>
+          <dt className="font-mono">F</dt><dd>flag</dd>
+          <dt className="font-mono">← →</dt><dd>previous / next</dd>
+          <dt className="font-mono">Enter</dt><dd>submit (on the last question)</dd>
+          <dt className="font-mono">Esc</dt><dd>close the submit dialog</dd>
+        </dl>
+        <p className="mt-1 text-xs text-gray-500">Shortcuts pause while you type in an issue answer.</p>
       </aside>
 
       {confirming && (

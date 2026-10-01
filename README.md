@@ -17,6 +17,21 @@ npm run dev
 
 Open http://localhost:3000.
 
+`npm run dev` listens on every network interface and prints the addresses at
+start, for example:
+
+```
+  Law Study (dev) listening on all interfaces, port 3000
+  This computer:  http://localhost:3000
+  Same wifi:      http://192.168.1.23:3000
+```
+
+Open the "Same wifi" address on your phone or another machine on the same
+network. The app is reachable only on your local network (your router does not
+forward it to the internet), but anyone on that network can open it, and there
+is no login. If you run the app from your own launcher, have it call
+`npm run dev` (or `npm start`) so the same script runs.
+
 - `npm run dev` re-reads `content/` on every request, so add or edit files and
   just reload the page. No restart needed.
 - `npm run build && npm start` runs the production build. Content is still read
@@ -52,6 +67,8 @@ content/
       notes/
         *.md
       questions.json
+      readings/        PDFs (optional)
+      images/          images used by notes and questions (optional)
 ```
 
 Folder names are the slugs and appear in URLs, so keep them lowercase with
@@ -68,7 +85,8 @@ Create `content/<course-slug>/course.json`:
 { "title": "Property", "order": 1 }
 ```
 
-`order` controls the order on the home page. Ties sort by title.
+`order` controls the order on the home page. Ties sort by title. An optional
+`"examDate": "YYYY-MM-DD"` sets the exam date (see **Exam dates**).
 
 Or click **New course** on the home page: enter a title and order, and the
 folder name is derived from the title ("Contracts: Offer & Acceptance" becomes
@@ -172,6 +190,11 @@ modifiesRule: "..."
 
 `date` must be `YYYY-MM-DD`, quoted or unquoted.
 
+The body can include images from the unit's `images/` folder with normal
+markdown: `![map](images/map.png)`. The note form's **Add image** button
+uploads a file there and inserts that line at the cursor. Absolute `http(s)`
+URLs work too.
+
 YAML tip: quote any value that contains a colon, `#`, or starts with a special
 character. Multi-line text works with `|`:
 
@@ -204,6 +227,11 @@ at all, so existing files keep working):
 - `answer` is the 0-based index into `choices` (so `2` is choice C).
 - `choices` needs at least 2 entries. Choice order is never shuffled.
 - `tags` is optional and defaults to `[]`.
+- `image` (optional, either type) is `images/<file>` in the unit's images
+  folder, shown above the stem or fact pattern. The importer refuses a name
+  that is not in the folder; the loader only warns.
+- `disabled: true` (optional, either type) keeps the question in the file but
+  out of every test, weak-tag count, and retry.
 - `id` must be unique within the course, because course-wide tests pool
   questions from every unit. Attempts store the id, so do not reuse an id for a
   different question later.
@@ -251,6 +279,9 @@ Multiple choice (type may be omitted):
   "answer": <0-4 index into choices>, "explanation": "...",
   "tags": ["..."] }
 
+Optional on either type: "image": "images/<file in the unit's images folder>",
+                         "disabled": true
+
 Issue spotter:
 { "id": "<unique in course>", "type": "issue",
   "factPattern": "...",                              // the only text shown during the test
@@ -293,6 +324,10 @@ and shows how many are unanswered.
 
 Nothing is saved until you submit. Leaving the page mid-test discards it (the
 browser will warn you).
+
+Keyboard shortcuts (listed under the navigator): `1`–`5` choose A–E, `F`
+flags, `←` / `→` move, `Enter` on the last question opens the submit dialog,
+`Esc` closes it. They pause while you type in an issue answer.
 
 ### Issue-spotter mode
 
@@ -432,6 +467,50 @@ Both use all matching questions (90 seconds per multiple choice, each issue
 question's own minutes) and are stored with scope "Retry missed". Retrying an
 issue question reruns the same fact pattern; you grade it again. A retry started from a unit page or from a unit's results shows
 in that unit's history. Questions removed from content since are skipped.
+
+## Question management
+
+The unit page ends with a **Questions** list: every entry in `questions.json`
+with its id, type, a preview, tags, and three controls.
+
+- **Edit** opens a form with the same fields as the schema (both types: for
+  issue questions you add or remove issues and pick the rule note from a
+  list). Saving validates exactly as the loader does and writes the entry back
+  to `questions.json`, keeping any keys the form does not know. The id and type
+  cannot change, because attempts are keyed by id.
+- **Disable** / **Enable** sets `"disabled": true` or removes it. Disabled
+  questions stay in the file, show greyed in the list, and never appear in
+  tests, setup counts, weak-tag pools, or retries. Past attempts still show
+  them.
+- **Delete** removes the entry from the file after a confirmation. Past
+  attempts keep their rows and show "no longer in content".
+
+## Readings
+
+Drop PDFs into `content/<course>/<unit>/readings/` or use **Upload PDF** in the
+unit page's Readings section (several at once is fine; up to 100 MB each).
+Uploaded names are made filesystem-safe ("Week 3 Cases.pdf" becomes
+`week-3-cases.pdf`). Click a reading to open it in the browser beside the
+unit's notes, with a link to open the raw PDF in its own tab. Files are served
+at `/files/<course>/<unit>/readings/<file>`; only `readings/` and `images/`
+under a unit are reachable that way. Backups include them.
+
+## Course outline
+
+**Outline** (home page or course page) is a read-only page listing every unit
+in order and, under each, the rule notes (name, rule statement, elements,
+exceptions, Wisconsin variation) followed by the case notes (name, rule,
+holding), text as written. Drafts are marked. **Export markdown** writes the
+same content to `~/Documents/law-school-outlines/<course>-<YYYY-MM-DD>.md`
+and shows the path; exporting again the same day overwrites that file.
+
+## Exam dates
+
+Set an exam date on the course page (saved as `examDate` in `course.json`;
+clear the field and save to remove it). The home page then shows days
+remaining and, while some units have no test attempts, **units per week to
+finish**: units with no attempts divided by weeks remaining, rounded up. Within
+a week of the exam the line turns red.
 
 ## Backups
 
@@ -620,6 +699,20 @@ The **Gaps** page lists, per course:
   too.
 - **The loader keeps multiple choice lenient (2+ choices)** and only the
   importer requires exactly 5, as before.
+- **Served files are limited to `readings/` and `images/`** under a unit, by
+  file name only, so a URL can never reach outside the content folder.
+- **Uploads go through server actions** with the body limit raised to 100 MB
+  in `next.config.ts`.
+- **A question's id and type are fixed in the edit form.** Changing the id
+  would orphan every attempt that recorded it.
+- **Disabled questions still render in old results**, since lookups search
+  the whole file; only test pools filter them out.
+- **The outline is built by one function** that feeds both the page and the
+  export, so the file always matches what you see.
+- **Units per week counts units with no attempts at all**, as asked, not
+  units with a low score.
+- **Binding to all interfaces is on by default.** The README says what that
+  means; there is no auth, so this is a trade-off you make by running it.
 
 ## Not built yet (schema left open)
 
@@ -639,6 +732,10 @@ src/lib/captures.ts       quick-capture inbox queries
 src/lib/backup.ts         zip backups of content/ and the database
 src/instrumentation.ts    runs the stale-backup check at server start
 src/lib/testing.ts        shuffle and question-stripping for test runs
+src/lib/outline.ts        course outline builder and markdown export
+src/lib/exam.ts           exam countdown and units-per-week
+src/app/files/            route that serves readings/ and images/
+scripts/dev.mjs           dev/start launcher: all interfaces, prints local IP
 src/lib/db.ts             SQLite connection + schema
 src/lib/attempts.ts       attempt queries
 src/lib/cards.ts          flashcards derived from notes
@@ -649,7 +746,8 @@ src/app/                  pages (server components) and the server actions
                           (actions.ts for tests/review, content-actions.ts for writes)
 src/components/notes/     note card, one field template per type, note form
 src/components/            ImportForm, EmphasisForm, CourseForm, UnitForm,
-                          TopicList, QuickCapture, UnitTable
+                          TopicList, QuickCapture, UnitTable, QuestionForm,
+                          ConfirmButton
 src/components/cards/     flashcard back, flip card, review card
 src/components/test/      the client-side test engine
 ```

@@ -22,10 +22,11 @@ export function unitDir(courseSlug: string, unitSlug: string): string {
   return dir;
 }
 
-function writeAtomic(file: string, text: string) {
+function writeAtomic(file: string, data: string | Buffer) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   const tmp = `${file}.${process.pid}.tmp`;
-  fs.writeFileSync(tmp, text, "utf8");
+  if (typeof data === "string") fs.writeFileSync(tmp, data, "utf8");
+  else fs.writeFileSync(tmp, data);
   fs.renameSync(tmp, file);
 }
 
@@ -79,6 +80,62 @@ export function updateUnitJson(courseSlug: string, unitSlug: string, patch: Reco
   const file = path.join(unitDir(courseSlug, unitSlug), "unit.json");
   const current = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
   writeAtomic(file, JSON.stringify({ ...current, ...patch }, null, 2) + "\n");
+}
+
+// ---- readings and images
+
+const SAFE_NAME = /[^a-z0-9._-]+/g;
+
+/** A filesystem-safe file name that keeps the extension: "Week 3 Cases.PDF" -> "week-3-cases.pdf". */
+export function safeFileName(original: string): string {
+  const base = path.basename(original).toLowerCase();
+  const ext = path.extname(base);
+  const stem = base.slice(0, base.length - ext.length).replace(SAFE_NAME, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "file";
+  return `${stem}${ext}`;
+}
+
+/** Write an uploaded file under readings/ or images/. Returns the stored file name (made unique if taken). */
+export function saveUnitFile(courseSlug: string, unitSlug: string, folder: "readings" | "images", original: string, data: Buffer): string {
+  const dir = path.join(unitDir(courseSlug, unitSlug), folder);
+  fs.mkdirSync(dir, { recursive: true });
+  let name = safeFileName(original);
+  const ext = path.extname(name);
+  const stem = name.slice(0, name.length - ext.length);
+  for (let i = 2; fs.existsSync(path.join(dir, name)); i++) name = `${stem}-${i}${ext}`;
+  writeAtomic(path.join(dir, name), data);
+  return name;
+}
+
+/** Absolute path of a served file, or null if the request escapes the unit's readings/ or images/ folder. */
+export function servedFilePath(courseSlug: string, unitSlug: string, folder: string, file: string): string | null {
+  if (!isSlug(courseSlug) || !isSlug(unitSlug)) return null;
+  if (folder !== "readings" && folder !== "images") return null;
+  if (!file || file !== path.basename(file) || file.startsWith(".")) return null;
+  const full = path.join(CONTENT_ROOT, courseSlug, unitSlug, folder, file);
+  return fs.existsSync(full) && fs.statSync(full).isFile() ? full : null;
+}
+
+// ---- question management (edits write back to questions.json, keeping unknown keys)
+
+/** Replace, patch, or remove one raw question by id. `update` returns the new raw entry or null to delete. */
+export function updateRawQuestion(courseSlug: string, unitSlug: string, id: string, update: (raw: Record<string, unknown>) => Record<string, unknown> | null): string {
+  const all = readRawQuestions(courseSlug, unitSlug);
+  const index = all.findIndex((q) => typeof q === "object" && q !== null && (q as { id?: unknown }).id === id);
+  if (index === -1) throw new Error(`question "${id}" not found in questions.json`);
+  const next = update(all[index] as Record<string, unknown>);
+  if (next === null) all.splice(index, 1);
+  else all[index] = next;
+  return writeQuestions(courseSlug, unitSlug, all);
+}
+
+/** Merge fields into course.json, keeping everything else as it is. */
+export function updateCourseJson(courseSlug: string, patch: Record<string, unknown>): void {
+  if (!isSlug(courseSlug)) throw new Error("bad course slug");
+  const file = path.join(CONTENT_ROOT, courseSlug, "course.json");
+  const current = JSON.parse(fs.readFileSync(file, "utf8")) as Record<string, unknown>;
+  const merged = { ...current, ...patch };
+  for (const [k, v] of Object.entries(patch)) if (v === undefined) delete merged[k];
+  writeAtomic(file, JSON.stringify(merged, null, 2) + "\n");
 }
 
 // ---- courses and units

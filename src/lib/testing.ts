@@ -2,6 +2,7 @@
 
 import type { RunnerQuestion } from "@/components/test/TestRunner";
 import type { Question } from "./content/types";
+import { fileUrl } from "./content/loader";
 
 export function shuffle<T>(items: T[]): T[] {
   const a = [...items];
@@ -26,11 +27,12 @@ export function pickQuestions(pool: Question[], mcCount: number, issueCount: num
 
 /** Strip answers, explanations, issues and model analyses before sending to the browser. */
 export function toRunnerQuestions(questions: Question[]): RunnerQuestion[] {
-  return questions.map((q) =>
-    q.type === "mc"
-      ? { kind: "mc", id: q.id, courseSlug: q.courseSlug, unitSlug: q.unitSlug, stem: q.stem, choices: q.choices }
-      : { kind: "issue", id: q.id, courseSlug: q.courseSlug, unitSlug: q.unitSlug, factPattern: q.factPattern, minutes: q.minutes },
-  );
+  return questions.map((q) => {
+    const imageUrl = q.image ? fileUrl(q.courseSlug, q.unitSlug, q.image) : undefined;
+    return q.type === "mc"
+      ? { kind: "mc", id: q.id, courseSlug: q.courseSlug, unitSlug: q.unitSlug, stem: q.stem, choices: q.choices, imageUrl }
+      : { kind: "issue", id: q.id, courseSlug: q.courseSlug, unitSlug: q.unitSlug, factPattern: q.factPattern, minutes: q.minutes, imageUrl };
+  });
 }
 
 /** One timer for the whole run: seconds per multiple-choice question plus each issue question's minutes. */

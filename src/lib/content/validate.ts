@@ -157,6 +157,12 @@ export function validateQuestion(
   requireString(raw, "id", problems);
   if (raw.tags !== undefined) requireStringList(raw, "tags", problems);
   const tags = Array.isArray(raw.tags) ? (raw.tags as string[]) : [];
+  if (raw.image !== undefined && raw.image !== null && (typeof raw.image !== "string" || !/^images\/[^/\\]+$/.test(raw.image))) {
+    problems.push(`"image" must be a file name under the unit's images folder, like "images/map.png"`);
+  }
+  const image = typeof raw.image === "string" && raw.image ? raw.image : undefined;
+  if (raw.disabled !== undefined && typeof raw.disabled !== "boolean") problems.push(`"disabled" must be true or false`);
+  const disabled = raw.disabled === true;
 
   if (type === "issue") {
     requireString(raw, "factPattern", problems);
@@ -180,7 +186,7 @@ export function validateQuestion(
     if (problems.length) return { ok: false, problems };
     return {
       ok: true,
-      value: { type: "issue", id: (raw.id as string).trim(), factPattern: raw.factPattern as string, issues, tags, minutes: minutes as number, courseSlug, unitSlug },
+      value: { type: "issue", id: (raw.id as string).trim(), image, disabled, factPattern: raw.factPattern as string, issues, tags, minutes: minutes as number, courseSlug, unitSlug },
     };
   }
 
@@ -202,6 +208,8 @@ export function validateQuestion(
     value: {
       type: "mc",
       id: (raw.id as string).trim(),
+      image,
+      disabled,
       stem: raw.stem as string,
       choices: choices as string[],
       answer: answer as number,
@@ -213,13 +221,21 @@ export function validateQuestion(
   };
 }
 
-export function validateCourseJson(raw: unknown): { ok: true; title: string; order: number } | { ok: false; problems: Problems } {
+export function validateCourseJson(
+  raw: unknown,
+): { ok: true; title: string; order: number; examDate: string | null } | { ok: false; problems: Problems } {
   if (!isRecord(raw)) return { ok: false, problems: ["course.json must be an object"] };
   const problems: Problems = [];
   requireString(raw, "title", problems);
   if (typeof raw.order !== "number") problems.push(`"order" must be a number`);
+  let examDate: string | null = null;
+  if (raw.examDate !== undefined && raw.examDate !== null && raw.examDate !== "") {
+    const d = normaliseDate(raw.examDate);
+    if (!d) problems.push(`"examDate" must be a date in YYYY-MM-DD form`);
+    else examDate = d;
+  }
   if (problems.length) return { ok: false, problems };
-  return { ok: true, title: raw.title as string, order: raw.order as number };
+  return { ok: true, title: raw.title as string, order: raw.order as number, examDate };
 }
 
 export function validateUnitJson(

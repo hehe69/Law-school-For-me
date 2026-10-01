@@ -56,6 +56,10 @@ export type Note = {
 export type McQuestion = {
   type: "mc";
   id: string;
+  /** Optional image shown above the stem, a path relative to the unit folder such as "images/map.png" */
+  image?: string;
+  /** Disabled questions stay in questions.json but never appear in tests */
+  disabled: boolean;
   stem: string;
   choices: string[];
   answer: number;
@@ -78,6 +82,8 @@ export type IssueSpec = {
 export type IssueQuestion = {
   type: "issue";
   id: string;
+  image?: string;
+  disabled: boolean;
   factPattern: string;
   issues: IssueSpec[];
   tags: string[];
@@ -97,15 +103,27 @@ export type Unit = {
   /** Free text from unit.json "emphasis": what the professor stressed. Empty when unset. */
   emphasis: string;
   notes: Note[];
+  /** PDF files under readings/ */
+  readings: Reading[];
+  /** File names under images/ */
+  images: string[];
   questions: Question[];
   /** Errors scoped to this unit (bad note, bad question) */
   errors: ContentError[];
+};
+
+export type Reading = {
+  /** File name, e.g. "week-3-cases.pdf" */
+  file: string;
+  bytes: number;
 };
 
 export type Course = {
   slug: string;
   title: string;
   order: number;
+  /** Optional exam date from course.json, YYYY-MM-DD */
+  examDate: string | null;
   units: Unit[];
 };
 

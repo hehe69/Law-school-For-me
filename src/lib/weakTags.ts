@@ -4,6 +4,7 @@
 import { getDb } from "./db";
 import type { AttemptRow } from "./attempts";
 import type { Course, Question } from "./content/types";
+import { courseQuestions } from "./content/loader";
 
 export type TagStat = {
   tag: string;
@@ -28,10 +29,8 @@ export function tagStats(course: Course): TagStat[] {
     .all(course.slug) as { tag: string; seen: number; missed: number }[];
 
   const inContent = new Map<string, number>();
-  for (const unit of course.units) {
-    for (const q of unit.questions) {
-      for (const t of q.tags) inContent.set(t, (inContent.get(t) ?? 0) + 1);
-    }
+  for (const q of courseQuestions(course)) {
+    for (const t of q.tags) inContent.set(t, (inContent.get(t) ?? 0) + 1);
   }
 
   return rows
@@ -47,7 +46,7 @@ export function weakestTags(stats: TagStat[], n = WEAKEST_COUNT): string[] {
 /** Course questions carrying any of the given tags, in syllabus order. */
 export function questionsWithTags(course: Course, tags: string[]): Question[] {
   const set = new Set(tags);
-  return course.units.flatMap((u) => u.questions.filter((q) => q.tags.some((t) => set.has(t))));
+  return courseQuestions(course).filter((q) => q.tags.some((t) => set.has(t)));
 }
 
 // A missed question is a wrong or unanswered multiple-choice question, or a graded issue question with any

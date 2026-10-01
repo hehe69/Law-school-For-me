@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { gradeIssuesAction } from "@/app/actions";
 import { getAttempt, type AttemptQuestionRow, type IssueResult, type IssueResultEntry } from "@/lib/attempts";
-import { findQuestion, findRuleNote, loadContent, SCOPE_LABELS } from "@/lib/content/loader";
+import { fileUrl, findQuestion, findRuleNote, loadContent, SCOPE_LABELS } from "@/lib/content/loader";
 import type { Course, IssueQuestion, McQuestion } from "@/lib/content/types";
 import { choiceLetter, formatDate, formatDuration, formatScore } from "@/lib/format";
 import { missedInAttempt } from "@/lib/weakTags";
@@ -26,6 +26,10 @@ function McReview({ row, q }: { row: AttemptQuestionRow; q: McQuestion | undefin
     <>
       {q ? (
         <>
+          {q.image && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={fileUrl(q.courseSlug, q.unitSlug, q.image)} alt="" className="mb-3 max-h-96 max-w-full rounded border border-gray-200" />
+          )}
           <p className="mb-3 whitespace-pre-line">{q.stem}</p>
           <ol className="mb-3 space-y-1">
             {q.choices.map((choice, ci) => {
@@ -68,6 +72,10 @@ function IssueReview({ row, q, course }: { row: AttemptQuestionRow; q: IssueQues
     <>
       <details className="mb-3 text-sm">
         <summary className="cursor-pointer text-gray-600">Fact pattern</summary>
+        {q.image && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={fileUrl(q.courseSlug, q.unitSlug, q.image)} alt="" className="mt-2 max-h-96 max-w-full rounded border border-gray-200" />
+        )}
         <p className="mt-2 whitespace-pre-line rounded border border-gray-200 bg-gray-50 p-3">{q.factPattern}</p>
       </details>
       <div className="grid gap-4 md:grid-cols-2">

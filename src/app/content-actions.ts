@@ -9,9 +9,15 @@ import { findUnit, loadContent } from "@/lib/content/loader";
 import { checkImportBatch, type ImportError, type ImportMode } from "@/lib/content/importer";
 import { validateQuestion, NOTE_FIELDS } from "@/lib/content/validate";
 import {
-  courseExists, createCourse, createUnit, isSlug, noteExists, readRawNote, readRawQuestions, slugify,
-  unitFolderExists, updateUnitJson, writeNote, writeQuestions,
+  courseExists, createCourse, createUnit, isSlug, noteExists, readRawNote, readRawQuestions, saveUnitFile, slugify,
+  unitFolderExists, updateCourseJson, updateRawQuestion, updateUnitJson, writeNote, writeQuestions,
 } from "@/lib/content/writer";
+import { findCourse, findRuleNote } from "@/lib/content/loader";
+import { normaliseRuleNoteRef } from "@/lib/content/validate";
+import { buildOutline, OUTLINE_DIR, outlineMarkdown } from "@/lib/outline";
+import { toDateString } from "@/lib/sm2";
+import fs from "node:fs";
+import path from "node:path";
 import type { NoteType } from "@/lib/content/types";
 import { addCapture, getCapture, markDiscarded, markFiled } from "@/lib/captures";
 import { runBackup } from "@/lib/backup";
@@ -258,4 +264,163 @@ export async function discardCaptureAction(formData: FormData): Promise<void> {
   if (Number.isInteger(id) && id > 0) markDiscarded(id);
   revalidatePath("/", "layout"); // header inbox count
   redirect("/inbox");
+}
+
+// ---------- Readings and images
+
+const MAX_UPLOAD = 100 * 1024 * 1024;
+
+export async function uploadReadingsAction(formData: FormData): Promise<void> {
+  const courseSlug = String(formData.get("course") ?? "");
+  const unitSlug = String(formData.get("unit") ?? "");
+  if (!isSlug(courseSlug) || !isSlug(unitSlug)) throw new Error("bad course or unit slug");
+  const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
+  const saved: string[] = [];
+  const skipped: string[] = [];
+  for (const f of files) {
+    if (!f.name.toLowerCase().endsWith(".pdf") || f.size > MAX_UPLOAD) {
+      skipped.push(f.name);
+      continue;
+    }
+    saved.push(saveUnitFile(courseSlug, unitSlug, "readings", f.name, Buffer.from(await f.arrayBuffer())));
+  }
+  const q = new URLSearchParams();
+  if (saved.length) q.set("uploaded", saved.join(","));
+  if (skipped.length) q.set("skipped", skipped.join(","));
+  redirect(`/courses/${courseSlug}/units/${unitSlug}?${q}#readings`);
+}
+
+export type UploadImageResult = { ok: true; name: string; markdown: string } | { ok: false; error: string };
+
+/** Called directly from the note form: stores the image under images/ and returns the markdown to insert. */
+export async function uploadImageAction(formData: FormData): Promise<UploadImageResult> {
+  const courseSlug = String(formData.get("course") ?? "");
+  const unitSlug = String(formData.get("unit") ?? "");
+  const file = formData.get("file");
+  if (!isSlug(courseSlug) || !isSlug(unitSlug)) return { ok: false, error: "bad course or unit slug" };
+  if (!(file instanceof File) || file.size === 0) return { ok: false, error: "choose an image file" };
+  const ext = path.extname(file.name).toLowerCase();
+  if (![".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"].includes(ext)) return { ok: false, error: "only png, jpg, gif, webp, or svg" };
+  if (file.size > MAX_UPLOAD) return { ok: false, error: "file is too large" };
+  try {
+    const name = saveUnitFile(courseSlug, unitSlug, "images", file.name, Buffer.from(await file.arrayBuffer()));
+    const alt = name.replace(/\.[^.]+$/, "").replace(/-/g, " ");
+    return { ok: true, name, markdown: `![${alt}](images/${name})` };
+  } catch (e) {
+    return { ok: false, error: (e as Error).message };
+  }
+}
+
+// ---------- Question management
+
+export type QuestionFormState = { error: string | null };
+
+function splitTags(v: string): string[] {
+  return v.split(",").map((t) => t.trim()).filter(Boolean);
+}
+
+/** Save edits to one question. The form posts the same fields as the JSON schema; unknown keys in the file are kept. */
+export async function saveQuestionAction(prev: QuestionFormState, formData: FormData): Promise<QuestionFormState> {
+  const courseSlug = String(formData.get("course") ?? "");
+  const unitSlug = String(formData.get("unit") ?? "");
+  const id = String(formData.get("id") ?? "");
+  if (!isSlug(courseSlug) || !isSlug(unitSlug) || !id) return { error: "bad course, unit, or id" };
+  const tree = loadContent();
+  const course = findCourse(tree, courseSlug);
+  const unit = course?.units.find((u) => u.slug === unitSlug);
+  if (!course || !unit) return { error: "unit not found" };
+
+  const type = formData.get("type") === "issue" ? "issue" : "mc";
+  const patch: Record<string, unknown> = { id, type, tags: splitTags(text(formData, "tags")) };
+  const image = text(formData, "image").trim();
+  patch.image = image || undefined;
+  if (type === "mc") {
+    patch.stem = text(formData, "stem").trim();
+    patch.choices = [0, 1, 2, 3, 4].map((i) => text(formData, `choice-${i}`).trim());
+    patch.answer = Number(formData.get("answer"));
+    patch.explanation = text(formData, "explanation").trim();
+  } else {
+    patch.factPattern = text(formData, "factPattern").trim();
+    patch.minutes = Number(formData.get("minutes"));
+    const count = Number(formData.get("issueCount")) || 0;
+    patch.issues = Array.from({ length: count }, (_, i) => ({
+      name: text(formData, `issue-${i}-name`).trim(),
+      ruleNote: text(formData, `issue-${i}-ruleNote`).trim(),
+      modelAnalysis: text(formData, `issue-${i}-modelAnalysis`).trim(),
+    })).filter((it) => it.name || it.ruleNote || it.modelAnalysis);
+  }
+
+  // Validate exactly as the loader would, plus rule-note and image existence.
+  const merged = { ...(readRawQuestions(courseSlug, unitSlug).find((q) => (q as { id?: unknown })?.id === id) as Record<string, unknown> | undefined), ...patch };
+  for (const k of ["stem", "choices", "answer", "explanation", "factPattern", "minutes", "issues"]) if (!(k in patch)) delete merged[k];
+  if (merged.image === undefined) delete merged.image;
+  const checked = validateQuestion(merged, courseSlug, unitSlug);
+  if (!checked.ok) return { error: checked.problems.join("; ") };
+  if (checked.value.type === "mc" && checked.value.choices.length !== 5) return { error: "exactly 5 choices are required" };
+  if (checked.value.type === "issue") {
+    for (const it of checked.value.issues) {
+      if (!findRuleNote(course, normaliseRuleNoteRef(it.ruleNote, courseSlug))) return { error: `ruleNote "${it.ruleNote}" is not a rule note in this course` };
+    }
+  }
+  if (checked.value.image && !unit.images.includes(checked.value.image.slice("images/".length))) return { error: `image "${checked.value.image}" is not in this unit's images folder` };
+
+  try {
+    updateRawQuestion(courseSlug, unitSlug, id, () => merged);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+  redirect(`/courses/${courseSlug}/units/${unitSlug}#question-${encodeURIComponent(id)}`);
+}
+
+export async function deleteQuestionAction(formData: FormData): Promise<void> {
+  const courseSlug = String(formData.get("course") ?? "");
+  const unitSlug = String(formData.get("unit") ?? "");
+  const id = String(formData.get("id") ?? "");
+  if (!isSlug(courseSlug) || !isSlug(unitSlug) || !id) throw new Error("bad course, unit, or id");
+  updateRawQuestion(courseSlug, unitSlug, id, () => null);
+  revalidatePath(`/courses/${courseSlug}/units/${unitSlug}`); // same page: a hash-only redirect would not refetch
+  redirect(`/courses/${courseSlug}/units/${unitSlug}#questions`);
+}
+
+export async function toggleQuestionAction(formData: FormData): Promise<void> {
+  const courseSlug = String(formData.get("course") ?? "");
+  const unitSlug = String(formData.get("unit") ?? "");
+  const id = String(formData.get("id") ?? "");
+  const disabled = formData.get("disabled") === "true";
+  if (!isSlug(courseSlug) || !isSlug(unitSlug) || !id) throw new Error("bad course, unit, or id");
+  updateRawQuestion(courseSlug, unitSlug, id, (raw) => {
+    const next = { ...raw };
+    if (disabled) next.disabled = true;
+    else delete next.disabled;
+    return next;
+  });
+  revalidatePath(`/courses/${courseSlug}/units/${unitSlug}`); // same page: a hash-only redirect would not refetch
+  redirect(`/courses/${courseSlug}/units/${unitSlug}#question-${encodeURIComponent(id)}`);
+}
+
+// ---------- Course outline export
+
+
+export async function exportOutlineAction(formData: FormData): Promise<void> {
+  const courseSlug = String(formData.get("course") ?? "");
+  if (!isSlug(courseSlug)) throw new Error("bad course slug");
+  const course = findCourse(loadContent(), courseSlug);
+  if (!course) throw new Error("course not found");
+  const today = toDateString(new Date());
+  const md = outlineMarkdown(course, buildOutline(course), today);
+  fs.mkdirSync(OUTLINE_DIR, { recursive: true });
+  const target = path.join(OUTLINE_DIR, `${courseSlug}-${today}.md`);
+  fs.writeFileSync(target, md, "utf8");
+  redirect(`/courses/${courseSlug}/outline?exported=${encodeURIComponent(target)}`);
+}
+
+// ---------- Exam date
+
+export async function setExamDateAction(formData: FormData): Promise<void> {
+  const courseSlug = String(formData.get("course") ?? "");
+  if (!isSlug(courseSlug)) throw new Error("bad course slug");
+  const raw = String(formData.get("examDate") ?? "").trim();
+  if (raw && !/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new Error("exam date must be YYYY-MM-DD");
+  updateCourseJson(courseSlug, { examDate: raw || undefined });
+  redirect(`/courses/${courseSlug}`);
 }

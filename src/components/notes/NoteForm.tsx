@@ -3,8 +3,8 @@
 // New/edit note form. The type selector switches the fields shown; everything is controlled state so
 // a failed save keeps what you typed. Saving posts to a server action which writes the markdown file.
 
-import { useActionState, useState } from "react";
-import { saveNoteAction, type NoteFormState } from "@/app/content-actions";
+import { useActionState, useRef, useState } from "react";
+import { saveNoteAction, uploadImageAction, type NoteFormState } from "@/app/content-actions";
 import type { Note, NoteType } from "@/lib/content/types";
 import { slugify } from "@/lib/slug";
 
@@ -72,6 +72,30 @@ export default function NoteForm(props: Props) {
   const [courseSlug, setCourseSlug] = useState(props.courseSlug);
   const [unitSlug, setUnitSlug] = useState(props.unitSlug);
   const editing = Boolean(note);
+  const bodyRef = useRef<HTMLTextAreaElement>(null);
+  const [imageStatus, setImageStatus] = useState<string | null>(null);
+
+  // Upload an image to the unit's images/ folder and insert its markdown at the cursor.
+  async function addImage(file: File | undefined) {
+    if (!file) return;
+    setImageStatus("Uploading…");
+    const fd = new FormData();
+    fd.append("course", courseSlug);
+    fd.append("unit", unitSlug);
+    fd.append("file", file);
+    const result = await uploadImageAction(fd);
+    if (!result.ok) {
+      setImageStatus(`Could not add image: ${result.error}`);
+      return;
+    }
+    const el = bodyRef.current;
+    const at = el ? el.selectionStart : body.length;
+    const before = body.slice(0, at);
+    const after = body.slice(at);
+    const sep = before && !before.endsWith("\n") ? "\n\n" : "";
+    setBody(`${before}${sep}${result.markdown}\n${after}`);
+    setImageStatus(`Added images/${result.name}`);
+  }
 
   // With pickers, the unit's topics and existing filenames follow the current selection.
   const pickedCourse = pickers?.find((c) => c.slug === courseSlug);
@@ -165,8 +189,21 @@ export default function NoteForm(props: Props) {
 
       <label className="block">
         <span className="font-medium">Body</span> <span className="text-sm text-gray-500">optional markdown</span>
-        <textarea name="body" value={body} onChange={(e) => setBody(e.target.value)} rows={5} className={inputCls} />
+        <textarea ref={bodyRef} name="body" value={body} onChange={(e) => setBody(e.target.value)} rows={5} className={inputCls} />
       </label>
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <label className="cursor-pointer rounded border border-gray-300 px-3 py-1 hover:bg-gray-50">
+          Add image
+          <input
+            type="file"
+            accept=".png,.jpg,.jpeg,.gif,.webp,.svg,image/*"
+            className="hidden"
+            onChange={(e) => { void addImage(e.target.files?.[0]); e.target.value = ""; }}
+          />
+        </label>
+        <span className="text-gray-500">Uploads to the unit&apos;s images/ folder and inserts <code className="font-mono">![alt](images/file.png)</code> at the cursor.</span>
+        {imageStatus && <span className="text-gray-700">{imageStatus}</span>}
+      </div>
 
       <p className="text-sm text-gray-600">
         File: <code className="font-mono">notes/{derivedSlug || "…"}.md</code>

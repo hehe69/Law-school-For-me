@@ -7,6 +7,7 @@ import { formatDate } from "@/lib/format";
 import { lastBackup } from "@/lib/backup";
 import { backupAction } from "@/app/content-actions";
 import UnitTable from "@/components/UnitTable";
+import { examPlan } from "@/lib/exam";
 
 export const dynamic = "force-dynamic";
 
@@ -74,16 +75,30 @@ export default async function HomePage({ searchParams }: PageProps<"/">) {
         </p>
       )}
 
-      {tree.courses.map((course) => (
+      {tree.courses.map((course) => {
+        const plan = examPlan(course, stats);
+        return (
         <section key={course.slug} className="mb-8">
           <h2 className="mb-2 flex items-baseline gap-3 text-xl font-semibold">
             <Link href={`/courses/${course.slug}`} className="hover:underline">{course.title}</Link>
             <Link href={`/courses/${course.slug}/units/new`} className="text-sm font-normal text-blue-700 underline">New unit</Link>
             <Link href={`/courses/${course.slug}/weak-tags`} className="text-sm font-normal text-blue-700 underline">Weak tags</Link>
+            <Link href={`/courses/${course.slug}/outline`} className="text-sm font-normal text-blue-700 underline">Outline</Link>
           </h2>
+          {plan && (
+            <p className={`mb-2 text-sm ${plan.daysRemaining >= 0 && plan.daysRemaining <= 7 ? "text-red-700" : "text-gray-700"}`}>
+              Exam {plan.examDate}:{" "}
+              {plan.daysRemaining > 0 ? `${plan.daysRemaining} day${plan.daysRemaining === 1 ? "" : "s"} remaining` : plan.daysRemaining === 0 ? "today" : `${-plan.daysRemaining} day${plan.daysRemaining === -1 ? "" : "s"} ago`}
+              {plan.unitsPerWeek !== null && (
+                <> · <strong>{plan.unitsPerWeek}</strong> unit{plan.unitsPerWeek === 1 ? "" : "s"} per week to finish ({plan.unitsRemaining} with no attempts)</>
+              )}
+              {plan.daysRemaining > 0 && plan.unitsRemaining === 0 && " · every unit has been tested"}
+            </p>
+          )}
           <UnitTable course={course} stats={stats} />
         </section>
-      ))}
+        );
+      })}
     </div>
   );
 }

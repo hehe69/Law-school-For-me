@@ -13,6 +13,7 @@ export default function NoteCard({ note, editHref }: { note: Note; editHref?: st
       ? `${fm.date || "(no date)"} · ${fm.topic || "(no topic)"}`
       : fm.name || "(untitled)";
   const draft = note.status === "draft";
+  const [courseSlug, unitSlug] = note.path.split("/");
 
   return (
     <article id={`note-${note.slug}`} className={`mb-4 rounded border p-4 ${draft ? "border-yellow-400 bg-yellow-50/40" : "border-gray-200"}`}>
@@ -31,7 +32,7 @@ export default function NoteCard({ note, editHref }: { note: Note; editHref?: st
       {fm.type === "case" && <CaseFields note={fm} />}
       {fm.type === "rule" && <RuleFields note={fm} />}
       {fm.type === "class" && <ClassFields note={fm} />}
-      <NoteBody body={note.body} />
+      <NoteBody body={note.body} courseSlug={courseSlug} unitSlug={unitSlug} />
     </article>
   );
 }

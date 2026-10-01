@@ -13,10 +13,12 @@ export type ImportError = {
   message: string;
 };
 
-export type ImportMc = { type: "mc"; id: string; stem: string; choices: string[]; answer: number; explanation: string; tags: string[] };
+export type ImportMc = { type: "mc"; id: string; stem: string; choices: string[]; answer: number; explanation: string; tags: string[]; image?: string; disabled?: boolean };
 export type ImportIssue = {
   type: "issue";
   id: string;
+  image?: string;
+  disabled?: boolean;
   factPattern: string;
   issues: { name: string; ruleNote: string; modelAnalysis: string }[];
   tags: string[];
@@ -37,7 +39,7 @@ function describe(v: unknown): string {
 }
 
 /** Check one pasted question (either type). Returns the cleaned question or plain-language problems. */
-export function checkImportQuestion(raw: unknown, course?: Course): { ok: true; value: ImportQuestion } | { ok: false; problems: string[] } {
+export function checkImportQuestion(raw: unknown, course?: Course, unit?: Unit): { ok: true; value: ImportQuestion } | { ok: false; problems: string[] } {
   if (!isRecord(raw)) return { ok: false, problems: [`is ${describe(raw)}, not an object with id, stem, choices, answer, explanation (or type "issue")`] };
   const problems: string[] = [];
 
@@ -69,6 +71,23 @@ export function checkImportQuestion(raw: unknown, course?: Course): { ok: true; 
     }
   }
 
+  let image: string | undefined;
+  if (raw.image !== undefined && raw.image !== null && raw.image !== "") {
+    if (typeof raw.image !== "string" || !/^images\/[^/\\]+$/.test(raw.image)) {
+      problems.push(`"image" is ${describe(raw.image)}; it must be a file name under the unit's images folder, like "images/map.png"`);
+    } else if (unit && !unit.images.includes(raw.image.slice("images/".length))) {
+      problems.push(`"image" ${raw.image} is not in this unit's images folder (upload it from the note form or copy it there first)`);
+    } else {
+      image = raw.image;
+    }
+  }
+  let disabled: boolean | undefined;
+  if (raw.disabled !== undefined) {
+    if (typeof raw.disabled !== "boolean") problems.push(`"disabled" is ${describe(raw.disabled)}; it must be true or false`);
+    else disabled = raw.disabled;
+  }
+  const extra = { ...(image ? { image } : {}), ...(disabled !== undefined ? { disabled } : {}) };
+
   if (type === "issue") {
     const factPattern = text(raw, "factPattern");
     const minutes = raw.minutes;
@@ -95,7 +114,7 @@ export function checkImportQuestion(raw: unknown, course?: Course): { ok: true; 
       });
     }
     if (problems.length) return { ok: false, problems };
-    return { ok: true, value: { type: "issue", id, factPattern, issues, tags, minutes: minutes as number } };
+    return { ok: true, value: { type: "issue", id, ...extra, factPattern, issues, tags, minutes: minutes as number } };
   }
 
   const stem = text(raw, "stem");
@@ -124,7 +143,7 @@ export function checkImportQuestion(raw: unknown, course?: Course): { ok: true; 
   }
 
   if (problems.length) return { ok: false, problems };
-  return { ok: true, value: { type: "mc", id, stem, choices, answer, explanation, tags } };
+  return { ok: true, value: { type: "mc", id, ...extra, stem, choices, answer, explanation, tags } };
 }
 
 /**
@@ -154,7 +173,7 @@ export function checkImportBatch(
 
   const seenInPaste = new Map<string, number>();
   parsed.forEach((item, index) => {
-    const result = checkImportQuestion(item, course);
+    const result = checkImportQuestion(item, course, unit);
     if (!result.ok) {
       for (const p of result.problems) errors.push({ index, message: p });
       return;
