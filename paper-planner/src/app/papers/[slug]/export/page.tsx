@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getPaperBySlug } from "@/lib/queries/papers";
 import { exportPaperAction } from "@/app/actions";
 import { EXPORTS_DIR } from "@/lib/paths";
+import { RevealButton } from "@/components/RevealButton";
 
 export default async function ExportPage({
   params,
@@ -20,6 +21,7 @@ export default async function ExportPage({
       {done && (
         <p className="card bg-green-50 border-green-300 text-sm">
           Written to <code>{done}</code>
+          <RevealButton path={done} />
         </p>
       )}
       <section className="card space-y-2 text-sm">

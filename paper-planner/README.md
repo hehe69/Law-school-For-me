@@ -42,6 +42,123 @@ window to stop the app.
 This folder is a standalone Next.js app inside the `Law-school-For-me` repo. The
 study app at the repo root is untouched and has its own `npm run dev`.
 
+## Desktop app (Electron, macOS)
+
+The same app can run as a Mac desktop app from the Dock, with no terminal. The
+Electron shell starts the production Next.js server inside its own process on a
+free localhost port and opens one window on it. Every page and feature is the web
+app unchanged.
+
+### Run it in development
+
+```bash
+npm run electron:dev
+```
+
+This starts `next dev` under your system Node and, once it answers on port 3000,
+compiles `electron/` and opens an Electron window on http://localhost:3000. Data
+stays in the project's `data/` and `papers/` folders exactly as with `npm run dev`.
+Quit the window to stop both.
+
+### Build the .app
+
+```bash
+npm run dist
+```
+
+This compiles `electron/` to `dist-electron/`, runs `next build`, and runs
+electron-builder for the current Mac architecture. Output goes to `release/`:
+`release/mac-arm64/Paper Planner.app` (or `release/mac/` on Intel) and a `.dmg`.
+Drag the `.app` to Applications or run it from `release/` directly.
+
+The app is not code-signed (`identity: null`). **First launch:** right-click (or
+Control-click) the app and choose Open, then Open again in the dialog. macOS only
+asks once. If macOS says the app is damaged, it is the quarantine flag on an
+unsigned app; run `xattr -dr com.apple.quarantine "/path/to/Paper Planner.app"`.
+
+`asar` is off because Next reads its build output with ordinary file APIs.
+
+`build/after-pack.js` runs after electron-builder copies the app. Turbopack writes
+each `serverExternalPackages` entry (better-sqlite3, adm-zip, mammoth, docx) as a
+relative symlink under `.next/node_modules/`, and electron-builder skips nested
+`node_modules` folders, so the hook recreates those links inside the `.app`.
+Without it the packaged server fails on start with "Cannot find module
+better-sqlite3-<hash>".
+
+Only macOS targets are configured. (During development the same config was
+exercised with `electron-builder --linux dir` to run the packaged app under Xvfb;
+that target is not part of `npm run dist`.)
+
+### Where the desktop app keeps data
+
+The packaged app sets `PAPER_PLANNER_HOME` to
+
+```
+~/Library/Application Support/Paper Planner/
+  planner.db
+  papers/<slug>/sources/*.pdf
+  papers/<slug>/drafts/*.docx
+  window-state.json
+```
+
+Exports still go to `~/Documents/paper-exports/` and backups to
+`~/Documents/paper-planner-backups/`, and the backup-on-start rule (newest
+backup older than a day) still applies. Export and backup success messages show a
+**Reveal in Finder** button in the desktop app.
+
+All filesystem locations are decided in `src/lib/paths.ts`:
+
+- `PAPER_PLANNER_HOME`: folder holding `planner.db` and `papers/`. Unset means the
+  project's `data/planner.db` and `papers/`, so `npm run dev` is unchanged.
+- `PAPER_PLANNER_APP_DIR`: folder holding the app's own files (`db/migrations`,
+  `.next`). Unset means the working directory. The shell sets it to the packaged
+  app folder.
+
+Stored file paths (`sources.pdf_path`, `drafts.file_path`) are relative to that
+home, e.g. `papers/<slug>/sources/x.pdf`, so a data folder moves as a unit.
+
+### Data menu
+
+- **Reveal Data Folder in Finder**: opens the folder above with `planner.db` selected.
+- **Import Data from Folder…**: pick a folder that contains `planner.db` (or
+  `data/planner.db`) and optionally `papers/`. A project checkout such as
+  `paper-planner/` from `npm run dev`, or an unzipped backup, both work. After a
+  confirmation, the app writes a safety backup of the current data, restarts, and
+  copies the chosen files over the current `planner.db` and `papers/` before the
+  database is opened. Import is disabled in `electron:dev`, where `next dev` holds
+  the database open in another process.
+- **Back Up Now**: runs the same backup as the home-page button and offers to
+  reveal the zip.
+
+### Window and shell behaviour
+
+Single window that remembers its size and position; a second launch focuses the
+existing window. Standard Edit menu shortcuts, View → Back/Forward, Reload and
+Toggle Developer Tools. Links to the app's own localhost origin stay in the
+window; any other `http(s)` link opens in the default browser. PDFs render in
+Chromium's built-in viewer. `contextIsolation` is on and `nodeIntegration` off;
+the only bridge exposed to the page is `window.paperPlanner.revealInFinder(path)`,
+which accepts paths under the exports, backups, or data folders. On quit the
+shell closes the HTTP server, the Next server, and the SQLite connection.
+
+### Native module note
+
+`better-sqlite3` 13 is a Node-API module that ships prebuilt binaries for
+`darwin-arm64` and `darwin-x64` in the npm package, and the same binary loads in
+Electron's Node, so no Electron-ABI rebuild is needed. The electron-builder config
+therefore sets `npmRebuild: false`, which also means building the app needs no
+Xcode toolchain. The `postdist` script (`npm rebuild better-sqlite3`) is kept as a
+safety net so `node_modules` is always left in the state `npm run dev` expects;
+with the prebuilt binary it is a quick no-op. If a future better-sqlite3 drops
+Node-API prebuilds, set `npmRebuild` back to `true` and the `postdist` restore
+becomes necessary again.
+
+`npm install` on npm 12 needs the install script of `electron` (which downloads
+the Electron binary) approved; `package.json` lists `electron@44.5.1` under
+`allowScripts` next to the existing `better-sqlite3` approval. `@electron/rebuild`
+has no install script. After upgrading Electron, run
+`npm install-scripts approve electron` and commit the change.
+
 ## Stack
 
 Next.js 16 (App Router, Turbopack) + TypeScript, Tailwind v4 for minimal styling.
@@ -67,6 +184,10 @@ paper-planner/
   src/lib/backup.ts               zip backup
   src/lib/seed.ts                 placeholder paper
   src/instrumentation.ts          runs once per server start (migrate, seed, backup)
+  electron/                       desktop shell: main.ts (server + window), menu.ts, preload.ts
+  dist-electron/                  compiled shell (gitignored)
+  build/icon.png                  app icon source; electron-builder makes the .icns
+  release/                        packaged .app and .dmg (gitignored)
 ~/Documents/paper-exports/        exports: <slug>-<date>.docx / .md, <slug>-sources-<date>.docx / .md
 ~/Documents/paper-planner-backups <date-time>.zip containing data/planner.db and papers/
 ```

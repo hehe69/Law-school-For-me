@@ -3,6 +3,7 @@ import { listPapers, nextMilestone, paperCounts } from "@/lib/queries/papers";
 import { lastBackupTime } from "@/lib/backup";
 import { backupAction, createPaperAction } from "./actions";
 import { fmtDateTime } from "@/lib/format";
+import { RevealButton } from "@/components/RevealButton";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function HomePage({ searchParams }: { searchParams: Promise
       {backup && (
         <p className="card text-sm bg-green-50 border-green-300">
           Backup written to <code>{backup}</code>
+          <RevealButton path={backup} />
         </p>
       )}
 

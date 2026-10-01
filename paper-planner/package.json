@@ -2,6 +2,7 @@
   "name": "paper-planner",
   "version": "0.1.0",
   "private": true,
+  "main": "dist-electron/main.js",
   "engines": {
     "node": ">=20"
   },
@@ -10,8 +11,12 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
-    "seed": "node scripts/seed.mjs"
+    "typecheck": "tsc --noEmit && tsc -p electron --noEmit",
+    "seed": "node scripts/seed.mjs",
+    "electron:compile": "tsc -p electron",
+    "electron:dev": "concurrently -k -s first -n next,electron \"next dev\" \"wait-on http://localhost:3000 && npm run electron:compile && PAPER_PLANNER_DEV_URL=http://localhost:3000 electron .\"",
+    "dist": "npm run electron:compile && next build && electron-builder --mac",
+    "postdist": "npm rebuild better-sqlite3"
   },
   "dependencies": {
     "adm-zip": "^0.6.1",
@@ -34,13 +39,70 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^10.0.5",
+    "electron": "^44.5.1",
+    "electron-builder": "^26.15.3",
     "eslint": "^9",
     "eslint-config-next": "16.3.8",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wait-on": "^9.5.1"
   },
   "allowScripts": {
     "better-sqlite3@13.0.3": true,
-    "unrs-resolver@1.12.2": true
+    "unrs-resolver@1.12.2": true,
+    "electron@44.5.1": true
+  },
+  "build": {
+    "appId": "local.lele.paperplanner",
+    "productName": "Paper Planner",
+    "copyright": "Local use only",
+    "asar": false,
+    "npmRebuild": false,
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "afterPack": "build/after-pack.js",
+    "files": [
+      ".next/**",
+      "!.next/cache/**",
+      "!.next/dev/**",
+      "!.next/types/**",
+      "!.next/diagnostics/**",
+      "!.next/trace",
+      "public/**",
+      "db/migrations/**",
+      "dist-electron/**",
+      "node_modules/**",
+      "package.json",
+      "next.config.*",
+      "!data/**",
+      "!papers/**",
+      "!release/**",
+      "!src/**",
+      "!electron/**",
+      "!scripts/**",
+      "!build/**",
+      "!**/*.map",
+      "!**/*.tsbuildinfo",
+      "!AGENTS.md",
+      "!CLAUDE.md",
+      "!README.md",
+      "!eslint.config.mjs",
+      "!postcss.config.mjs",
+      "!tsconfig.json"
+    ],
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "identity": null,
+      "icon": "build/icon.png",
+      "category": "public.app-category.productivity"
+    },
+    "dmg": {
+      "writeUpdateInfo": false
+    }
   }
 }

@@ -3,18 +3,29 @@ import fs from "node:fs";
 import path from "node:path";
 import { DATA_DIR, DB_PATH, MIGRATIONS_DIR, ensureDir } from "./paths";
 
-// One connection per process, kept across hot reloads in dev.
-const globalForDb = globalThis as unknown as { __plannerDb?: Database.Database };
+// One connection per process, kept across hot reloads in dev. The Electron shell (electron/main.ts)
+// closes it through the same globalThis key when the app quits, since Next runs in its process.
+const globalForDb = globalThis as unknown as { __plannerDb?: Database.Database; __plannerDbExitHook?: boolean };
 
 export function getDb(): Database.Database {
-  if (globalForDb.__plannerDb) return globalForDb.__plannerDb;
+  if (globalForDb.__plannerDb?.open) return globalForDb.__plannerDb;
   ensureDir(DATA_DIR);
   const db = new Database(DB_PATH);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   migrate(db);
   globalForDb.__plannerDb = db;
+  if (!globalForDb.__plannerDbExitHook) {
+    globalForDb.__plannerDbExitHook = true;
+    process.once("exit", closeDb);
+  }
   return db;
+}
+
+// Checkpoints the WAL and releases the file. Safe to call more than once.
+export function closeDb() {
+  const db = globalForDb.__plannerDb;
+  if (db?.open) db.close();
 }
 
 // Numbered SQL files in db/migrations/, applied in order and recorded in schema_version.

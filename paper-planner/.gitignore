@@ -9,3 +9,7 @@ npm-debug.log*
 # local data: the SQLite database and uploaded files
 /data/
 /papers/
+
+# electron shell build output
+/dist-electron/
+/release/
