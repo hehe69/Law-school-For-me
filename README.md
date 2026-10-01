@@ -184,7 +184,9 @@ facts: |
 
 ### Add questions
 
-Create `content/<course>/<unit>/questions.json` as a JSON array:
+Create `content/<course>/<unit>/questions.json` as a JSON array. Two question
+types can be mixed in one file. Multiple choice (`"type": "mc"`, or no `type`
+at all, so existing files keep working):
 
 ```json
 [
@@ -206,8 +208,58 @@ Create `content/<course>/<unit>/questions.json` as a JSON array:
   questions from every unit. Attempts store the id, so do not reuse an id for a
   different question later.
 
-Multiple choice only for now. Hand-written files may have 2 or more choices;
-the in-app importer insists on exactly 5 (see **Importing questions**).
+Hand-written files may have 2 or more choices; the in-app importer insists on
+exactly 5 (see **Importing questions**).
+
+Issue-spotter questions (`"type": "issue"`): a fact pattern you answer in a
+timed blank editor, then grade yourself against a list of issues.
+
+```json
+{
+  "id": "ap-issue-001",
+  "type": "issue",
+  "factPattern": "In 2004 Dana began farming a strip ...\n\nDiscuss Pat's claim.",
+  "issues": [
+    {
+      "name": "Tacking between Dana and Pat",
+      "ruleNote": "adverse-possession/notes/elements-of-adverse-possession.md",
+      "modelAnalysis": "Dana's deed did not describe the strip, so ..."
+    }
+  ],
+  "tags": ["tacking", "wisconsin"],
+  "minutes": 20
+}
+```
+
+- `ruleNote` is the path of a **rule** note in the same course, relative to the
+  course folder: `<unit>/notes/<file>.md`. (The full `content/<course>/...`
+  form is also accepted.) At review time the rule statement is pulled live
+  from that note, so editing the note updates every question that cites it.
+- `issues` needs at least one entry. `minutes` is the time this question adds
+  to the test timer.
+- An issue question whose `ruleNote` does not point at an existing rule note is
+  a content error and is skipped until fixed.
+
+#### Schema block for a Project instructions file
+
+```
+questions.json is a JSON array. Each element is one of:
+
+Multiple choice (type may be omitted):
+{ "id": "<unique in course>", "type": "mc", "stem": "...",
+  "choices": ["...", "...", "...", "...", "..."],   // exactly 5
+  "answer": <0-4 index into choices>, "explanation": "...",
+  "tags": ["..."] }
+
+Issue spotter:
+{ "id": "<unique in course>", "type": "issue",
+  "factPattern": "...",                              // the only text shown during the test
+  "issues": [                                        // at least one
+    { "name": "...",
+      "ruleNote": "<unit-slug>/notes/<file>.md",     // a rule note in this course
+      "modelAnalysis": "..." } ],
+  "tags": ["..."], "minutes": <positive number> }
+```
 
 ### Malformed files
 
@@ -223,11 +275,17 @@ From a unit page, "Start test" opens setup:
 - **Scope**: this unit, all units up to this one (by `order`), or the whole
   course. Two more scopes exist that are not chosen here: "Weakest tags" and
   "Retry missed" (see below).
-- **Number of questions**: defaults to all in scope, capped at what the scope
-  has.
-- **Seconds per question**: default 90. Total time = count × seconds.
+- **Format**: multiple choice only, issue spotter only, or a **mixed exam**.
+- **Multiple-choice questions** and **Seconds per multiple-choice question**
+  (default 90).
+- **Issue questions**: how many to include. Each brings its own `minutes`.
 
-Questions are shuffled each time a test starts. The timer starts when the test
+One timer covers the whole test: multiple choice × seconds, plus every chosen
+issue question's minutes. A mixed exam runs all multiple choice first, then the
+issue questions, as a real exam would; the navigator labels issue questions
+I1, I2, and so on.
+
+Questions are shuffled within each part each time a test starts. The timer starts when the test
 page loads and is always visible. At zero the test auto-submits with whatever is
 answered. Click a selected choice again to clear it. Flag questions, move with
 Previous/Next, or jump from the navigator grid. Submit asks for confirmation
@@ -236,12 +294,30 @@ and shows how many are unanswered.
 Nothing is saved until you submit. Leaving the page mid-test discards it (the
 browser will warn you).
 
+### Issue-spotter mode
+
+During the test an issue question shows only the fact pattern, the suggested
+minutes, and a blank editor. On submit your written answer is saved and the
+results page shows it beside the question's issues, each with the rule
+statement pulled live from the linked rule note (with a link to the note) and
+the model analysis. For each issue pick **Spotted**, **Missed**, or **Spotted,
+wrong rule**, then "Save grading". There is no automatic grading.
+
+Score is points: 1 per multiple-choice question answered correctly plus 1 per
+issue spotted (an issue with the wrong rule earns nothing). An issue question
+counts as *correct* only when every issue is spotted; otherwise it is a missed
+question for weak tags and retry. Until you grade it, it is neither, and the
+results page shows it as ungraded. You can change the grading later with
+"Update grading".
+
 ## Attempts
 
 Each attempt stores: scope, the unit it was started from, every question id in
 the order shown, your answer, the correct answer, whether it was right, the
 flag, a snapshot of the question's tags, time limit, time used, whether time
-ran out, and the score.
+ran out, points earned and possible, and the score. Issue questions also store
+the written answer, the number of issues, and once graded the per-issue result
+and the time of grading.
 
 - `/attempts/<id>` is the results page with a "wrong only" filter. Unanswered
   counts as wrong.
@@ -258,12 +334,20 @@ letter but not the text.
 attempts (
   id, course_slug, unit_slug, scope, started_at, finished_at,
   time_limit_seconds, time_used_seconds, auto_submitted,
-  question_count, correct_count, score_percent
+  question_count, correct_count, score_percent,
+  points_earned, points_possible
 )
 attempt_questions (
   attempt_id, position, course_slug, unit_slug, question_id,
-  selected, correct_answer, is_correct, flagged, tags   -- tags is a JSON array
+  selected, correct_answer, is_correct, flagged, tags,  -- tags is a JSON array
+  question_type,          -- 'mc' or 'issue'
+  written_answer, issue_count, spotted_count,
+  issue_results,          -- JSON [{ name, ruleNotePath, result }], result: spotted | missed | wrong-rule
+  graded_at
 )
+
+Columns added after the first release are created by a migration on start;
+older rows get points_earned = correct_count and points_possible = question_count.
 ```
 
 Per-question correctness and tags are stored so weak-tag reports can be
@@ -279,7 +363,8 @@ question schema above and choose what happens on success:
   current ones are deleted).
 
 The importer checks every question and lists each problem with its index in the
-paste (`[2] "answer" is 5; it must be from 0 to 4`). Rules:
+paste (`[2] "answer" is 5; it must be from 0 to 4`). A paste may mix both
+types. Rules for multiple choice:
 
 - `id`, `stem`, `explanation` are non-empty text.
 - `choices` has exactly 5 non-empty strings.
@@ -287,6 +372,12 @@ paste (`[2] "answer" is 5; it must be from 0 to 4`). Rules:
 - `tags`, if present, is a list of strings.
 - `id` is new within the whole course (in Replace mode the unit's own current
   ids may be reused) and not repeated inside the paste.
+
+Rules for issue questions (`"type": "issue"`):
+
+- `factPattern` is non-empty text, `minutes` is a positive number, `issues`
+  has at least one entry with `name`, `ruleNote`, and `modelAnalysis`.
+- Every `ruleNote` must resolve to an existing rule note in this course.
 
 Nothing is written unless every question passes and the resulting file would
 load cleanly. In Append mode, if the existing file has invalid entries the
@@ -317,7 +408,9 @@ shows as a draft until you fill them in, either in the form or in the file.
 
 "Weak tags" (linked from the home page and every unit page) lists, per course,
 every tag seen in your attempts with how many times questions carrying it were
-seen, missed, and the miss rate. Unanswered counts as missed. Tags come from
+seen, missed, and the miss rate. Unanswered counts as missed. A graded issue
+question counts as missed when any issue was missed or given the wrong rule;
+ungraded ones are left out. Tags come from
 the snapshot stored with each attempt, so renaming a tag in content starts a
 new row. The table also shows how many questions currently carry each tag.
 
@@ -335,8 +428,9 @@ tests" and not in any unit's history or home-page stats.
 - On a unit page, **Retry all missed (N)** starts a test from every question in
   that unit you have ever missed, in any attempt.
 
-Both use all matching questions at 90 seconds each and are stored with scope
-"Retry missed". A retry started from a unit page or from a unit's results shows
+Both use all matching questions (90 seconds per multiple choice, each issue
+question's own minutes) and are stored with scope "Retry missed". Retrying an
+issue question reruns the same fact pattern; you grade it again. A retry started from a unit page or from a unit's results shows
 in that unit's history. Questions removed from content since are skipped.
 
 ## Backups
@@ -511,10 +605,26 @@ The **Gaps** page lists, per course:
   an inbox with no way to drop a stray capture only grows.
 - **The capture box saves without leaving the page**; the header count
   refreshes in place.
+- **Issue grading happens on the results page, after submit.** The attempt is
+  saved with the written answer first, so a timer running out or a closed tab
+  after submit never loses the essay. Grading can be revised later.
+- **An issue question is "correct" only when fully spotted.** Tags are per
+  question, so one missed issue marks the whole question's tags as missed in
+  weak tags. Points still give partial credit.
+- **"Wrong rule" earns no point.** Spotting an issue but citing the wrong rule
+  is the mistake that costs marks on an exam.
+- **The time limit is one number for the whole test.** There is no per-section
+  cutoff, as on a real exam you decide how to split the time.
+- **`ruleNote` paths are course-relative** so a course folder can be renamed
+  without editing every question. The full content-relative form is accepted
+  too.
+- **The loader keeps multiple choice lenient (2+ choices)** and only the
+  importer requires exactly 5, as before.
 
 ## Not built yet (schema left open)
 
-Essay questions, file upload UI, search, auth, deployment.
+Essay questions with free grading rubrics (issue spotters cover the exam
+pattern for now), file upload UI, search, auth, deployment.
 
 ## Project layout
 

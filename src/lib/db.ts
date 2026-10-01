@@ -88,6 +88,26 @@ export function getDb(): Database.Database {
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   db.exec(SCHEMA);
+  migrate(db);
   g.__studyDb = db;
   return db;
+}
+
+/** Add columns introduced after the first release. Safe to run every start. */
+function migrate(db: Database.Database) {
+  const ensure = (table: string, column: string, decl: string) => {
+    const cols = db.pragma(`table_info(${table})`) as { name: string }[];
+    if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${decl}`);
+  };
+  // Points: multiple choice = 1 per question, issue questions = 1 per issue spotted.
+  ensure("attempts", "points_earned", "INTEGER");
+  ensure("attempts", "points_possible", "INTEGER");
+  db.exec("UPDATE attempts SET points_earned = correct_count, points_possible = question_count WHERE points_possible IS NULL");
+  // Issue-spotter rows.
+  ensure("attempt_questions", "question_type", "TEXT NOT NULL DEFAULT 'mc'");
+  ensure("attempt_questions", "written_answer", "TEXT");
+  ensure("attempt_questions", "issue_count", "INTEGER");
+  ensure("attempt_questions", "spotted_count", "INTEGER");
+  ensure("attempt_questions", "issue_results", "TEXT"); // JSON: [{ name, ruleNotePath, result }]
+  ensure("attempt_questions", "graded_at", "TEXT");
 }

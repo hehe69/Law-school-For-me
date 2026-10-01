@@ -36,7 +36,12 @@ export default function UnitTable({ course, stats, showEdit = false }: { course:
                 {unit.notes.length}
                 {drafts > 0 && <span className="ml-1 text-xs text-yellow-900">({drafts} draft)</span>}
               </td>
-              <td className="py-2 pr-2 text-right">{unit.questions.length}</td>
+              <td className="py-2 pr-2 text-right">
+                {unit.questions.length}
+                {unit.questions.some((q) => q.type === "issue") && (
+                  <span className="ml-1 text-xs text-gray-500">({unit.questions.filter((q) => q.type === "issue").length} issue)</span>
+                )}
+              </td>
               <td className="py-2 pr-2 text-right">{formatScore(s?.bestScore ?? null)}</td>
               <td className="py-2 pr-2">
                 {s ? (

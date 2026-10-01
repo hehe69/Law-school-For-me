@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import TestRunner from "@/components/test/TestRunner";
 import { courseQuestions, DEFAULT_SECONDS_PER_QUESTION, findCourse, loadContent, SCOPE_LABELS, type Scope } from "@/lib/content/loader";
-import { listParam, toInt, toRunnerQuestions } from "@/lib/testing";
+import { countByType, listParam, pickQuestions, timeLimitFor, toInt, toRunnerQuestions } from "@/lib/testing";
 import { questionsWithTags } from "@/lib/weakTags";
 
 export const dynamic = "force-dynamic";
@@ -38,8 +38,11 @@ export default async function CourseTestRunPage({ params, searchParams }: PagePr
     );
   }
 
-  const count = Math.min(pool.length, Math.max(1, toInt(sp.count, pool.length)));
+  const available = countByType(pool);
+  const count = Math.min(available.mc, Math.max(0, toInt(sp.count, available.mc)));
+  const issues = Math.min(available.issue, Math.max(0, toInt(sp.issues, available.issue)));
   const secondsPerQuestion = Math.min(3600, Math.max(5, toInt(sp.seconds, DEFAULT_SECONDS_PER_QUESTION)));
+  const picked = pickQuestions(pool, count, issues);
 
   return (
     <TestRunner
@@ -48,9 +51,9 @@ export default async function CourseTestRunPage({ params, searchParams }: PagePr
       scope={scope}
       scopeLabel={SCOPE_LABELS[scope]}
       unitTitle={unit ? unit.title : course.title}
-      timeLimitSeconds={count * secondsPerQuestion}
+      timeLimitSeconds={timeLimitFor(picked, secondsPerQuestion)}
       startedAt={new Date().toISOString()}
-      questions={toRunnerQuestions(pool, count)}
+      questions={toRunnerQuestions(picked)}
     />
   );
 }

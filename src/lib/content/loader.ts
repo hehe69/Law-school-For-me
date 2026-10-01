@@ -165,6 +165,22 @@ export function loadContent(): ContentTree {
   }
 
   courses.sort(byOrder);
+
+  // Issue questions must point at rule notes that exist in their course.
+  for (const course of courses) {
+    for (const unit of course.units) {
+      unit.questions = unit.questions.filter((q) => {
+        if (q.type !== "issue") return true;
+        const bad = q.issues.filter((it) => !findRuleNote(course, it.ruleNotePath));
+        if (bad.length === 0) return true;
+        const msg = `issue question "${q.id}": ${bad.map((it) => `ruleNote "${it.ruleNote}" is not a rule note in this course`).join("; ")}`;
+        unit.errors.push({ path: `${course.slug}/${unit.slug}/questions.json`, message: msg });
+        errors.push({ path: `${course.slug}/${unit.slug}/questions.json`, message: msg });
+        return false;
+      });
+    }
+  }
+
   // Question ids must be unique across a course because a course-wide test pools them.
   for (const course of courses) {
     const seen = new Map<string, string>();
@@ -220,6 +236,15 @@ export function questionsForScope(course: Course, unit: Unit, scope: PoolScope):
   const units =
     scope === "unit" ? [unit] : scope === "upto" ? course.units.filter((u) => u.order <= unit.order) : course.units;
   return units.flatMap((u) => u.questions);
+}
+
+/** A rule note in this course by content-relative path (drafts included), or undefined. */
+export function findRuleNote(course: Course, notePath: string): { unit: Unit; note: Note } | undefined {
+  for (const unit of course.units) {
+    const note = unit.notes.find((n) => n.path === notePath && n.frontmatter.type === "rule");
+    if (note) return { unit, note };
+  }
+  return undefined;
 }
 
 /** Look up a note by its content-relative path (the flashcard key). */

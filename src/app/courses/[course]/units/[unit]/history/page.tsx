@@ -37,7 +37,7 @@ export default async function HistoryPage({ params }: PageProps<"/courses/[cours
               <th className="py-1 pr-2 font-medium">Date</th>
               <th className="py-1 pr-2 font-medium">Scope</th>
               <th className="py-1 pr-2 text-right font-medium">Score</th>
-              <th className="py-1 pr-2 text-right font-medium">Correct</th>
+              <th className="py-1 pr-2 text-right font-medium">Points</th>
               <th className="py-1 pr-2 text-right font-medium">Time</th>
               <th className="py-1 pr-2 font-medium"></th>
             </tr>
@@ -48,7 +48,7 @@ export default async function HistoryPage({ params }: PageProps<"/courses/[cours
                 <td className="py-2 pr-2">{formatDate(a.finished_at)}</td>
                 <td className="py-2 pr-2">{SCOPE_LABELS[a.scope]}</td>
                 <td className="py-2 pr-2 text-right font-medium">{formatScore(a.score_percent)}</td>
-                <td className="py-2 pr-2 text-right">{a.correct_count}/{a.question_count}</td>
+                <td className="py-2 pr-2 text-right">{a.points_earned}/{a.points_possible}</td>
                 <td className="py-2 pr-2 text-right">
                   {formatDuration(a.time_used_seconds)}{a.auto_submitted ? " (timed out)" : ""}
                 </td>

@@ -16,7 +16,13 @@ export type AttemptRow = {
   question_count: number;
   correct_count: number;
   score_percent: number;
+  /** 1 per multiple-choice question, 1 per issue in an issue question */
+  points_earned: number;
+  points_possible: number;
 };
+
+export type IssueResult = "spotted" | "missed" | "wrong-rule";
+export type IssueResultEntry = { name: string; ruleNotePath: string; result: IssueResult };
 
 export type AttemptQuestionRow = {
   attempt_id: number;
@@ -29,6 +35,12 @@ export type AttemptQuestionRow = {
   is_correct: number;
   flagged: number;
   tags: string; // JSON array
+  question_type: "mc" | "issue";
+  written_answer: string | null;
+  issue_count: number | null;
+  spotted_count: number | null;
+  issue_results: string | null; // JSON IssueResultEntry[] once graded
+  graded_at: string | null;
 };
 
 export type NewAttempt = {
@@ -40,45 +52,74 @@ export type NewAttempt = {
   timeLimitSeconds: number;
   timeUsedSeconds: number;
   autoSubmitted: boolean;
-  questions: {
-    courseSlug: string;
-    unitSlug: string;
-    questionId: string;
-    selected: number | null;
-    correctAnswer: number;
-    flagged: boolean;
-    tags: string[];
-  }[];
+  questions: NewAttemptQuestion[];
 };
+
+export type NewAttemptQuestion =
+  | { type: "mc"; courseSlug: string; unitSlug: string; questionId: string; selected: number | null; correctAnswer: number; flagged: boolean; tags: string[] }
+  | { type: "issue"; courseSlug: string; unitSlug: string; questionId: string; written: string; issueCount: number; flagged: boolean; tags: string[] };
 
 export function insertAttempt(a: NewAttempt): number {
   const db = getDb();
-  const correct = a.questions.filter((q) => q.selected === q.correctAnswer).length;
+  const mcCorrect = a.questions.filter((q) => q.type === "mc" && q.selected === q.correctAnswer).length;
+  const pointsPossible = a.questions.reduce((n, q) => n + (q.type === "mc" ? 1 : q.issueCount), 0);
   const total = a.questions.length;
   const insertAttemptStmt = db.prepare(`
     INSERT INTO attempts (course_slug, unit_slug, scope, started_at, finished_at, time_limit_seconds,
-      time_used_seconds, auto_submitted, question_count, correct_count, score_percent)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+      time_used_seconds, auto_submitted, question_count, correct_count, score_percent, points_earned, points_possible)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   const insertQuestionStmt = db.prepare(`
     INSERT INTO attempt_questions (attempt_id, position, course_slug, unit_slug, question_id, selected,
-      correct_answer, is_correct, flagged, tags)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+      correct_answer, is_correct, flagged, tags, question_type, written_answer, issue_count)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
 
   const run = db.transaction(() => {
+    // Issue questions start ungraded, so they contribute nothing to the score until graded.
     const info = insertAttemptStmt.run(
       a.courseSlug, a.unitSlug, a.scope, a.startedAt, a.finishedAt, a.timeLimitSeconds,
-      a.timeUsedSeconds, a.autoSubmitted ? 1 : 0, total, correct, total === 0 ? 0 : (100 * correct) / total,
+      a.timeUsedSeconds, a.autoSubmitted ? 1 : 0, total, mcCorrect,
+      pointsPossible === 0 ? 0 : (100 * mcCorrect) / pointsPossible, mcCorrect, pointsPossible,
     );
     const attemptId = Number(info.lastInsertRowid);
     a.questions.forEach((q, i) => {
-      insertQuestionStmt.run(
-        attemptId, i, q.courseSlug, q.unitSlug, q.questionId, q.selected,
-        q.correctAnswer, q.selected === q.correctAnswer ? 1 : 0, q.flagged ? 1 : 0, JSON.stringify(q.tags),
-      );
+      if (q.type === "mc") {
+        insertQuestionStmt.run(
+          attemptId, i, q.courseSlug, q.unitSlug, q.questionId, q.selected,
+          q.correctAnswer, q.selected === q.correctAnswer ? 1 : 0, q.flagged ? 1 : 0, JSON.stringify(q.tags), "mc", null, null,
+        );
+      } else {
+        insertQuestionStmt.run(
+          attemptId, i, q.courseSlug, q.unitSlug, q.questionId, null,
+          -1, 0, q.flagged ? 1 : 0, JSON.stringify(q.tags), "issue", q.written, q.issueCount,
+        );
+      }
     });
     return attemptId;
   });
   return run();
+}
+
+/** Store self-grading for every issue question in an attempt and recompute its score. */
+export function gradeIssues(attemptId: number, grades: Map<number, IssueResultEntry[]>): void {
+  const db = getDb();
+  const run = db.transaction(() => {
+    const now = new Date().toISOString();
+    const update = db.prepare(
+      "UPDATE attempt_questions SET issue_results = ?, spotted_count = ?, is_correct = ?, graded_at = ? WHERE attempt_id = ? AND position = ? AND question_type = 'issue'",
+    );
+    for (const [position, entries] of grades) {
+      const spotted = entries.filter((e) => e.result === "spotted").length;
+      update.run(JSON.stringify(entries), spotted, spotted === entries.length ? 1 : 0, now, attemptId, position);
+    }
+    const rows = db.prepare("SELECT * FROM attempt_questions WHERE attempt_id = ?").all(attemptId) as AttemptQuestionRow[];
+    const earned = rows.reduce((n, r) => n + (r.question_type === "mc" ? r.is_correct : (r.spotted_count ?? 0)), 0);
+    const possible = rows.reduce((n, r) => n + (r.question_type === "mc" ? 1 : (r.issue_count ?? 0)), 0);
+    const correct = rows.filter((r) => r.is_correct).length;
+    db.prepare("UPDATE attempts SET points_earned = ?, points_possible = ?, correct_count = ?, score_percent = ? WHERE id = ?").run(
+      earned, possible, correct, possible === 0 ? 0 : (100 * earned) / possible, attemptId,
+    );
+  });
+  run();
 }
 
 export function getAttempt(id: number): { attempt: AttemptRow; questions: AttemptQuestionRow[] } | undefined {

@@ -72,7 +72,7 @@ export default async function WeakTagsPage({ params }: PageProps<"/courses/[cour
           <ul className="space-y-1 text-sm">
             {recent.map((a) => (
               <li key={a.id}>
-                {formatDate(a.finished_at)} · {SCOPE_LABELS[a.scope]} · {formatScore(a.score_percent)} ({a.correct_count}/{a.question_count}) ·{" "}
+                {formatDate(a.finished_at)} · {SCOPE_LABELS[a.scope]} · {formatScore(a.score_percent)} ({a.points_earned}/{a.points_possible}) ·{" "}
                 <Link href={`/attempts/${a.id}`} className="text-blue-700 underline">Review</Link>
               </li>
             ))}

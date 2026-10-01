@@ -8,6 +8,7 @@ import EmphasisForm from "@/components/EmphasisForm";
 import { listAttemptsForUnit } from "@/lib/attempts";
 import { cardsForUnit } from "@/lib/cards";
 import { missedQuestionIds } from "@/lib/weakTags";
+import { countByType } from "@/lib/testing";
 import { formatDate, formatScore } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +31,7 @@ export default async function UnitPage({ params }: PageProps<"/courses/[course]/
   const inUnit = new Set(unit.questions.map((q) => q.id));
   const missed = missedQuestionIds(course.slug, unit.slug).filter((id) => inUnit.has(id));
   const draftCount = unit.notes.filter((n) => n.status === "draft").length;
+  const byType = countByType(unit.questions);
 
   return (
     <div>
@@ -47,7 +49,8 @@ export default async function UnitPage({ params }: PageProps<"/courses/[course]/
 
       <div className="mb-8 flex flex-wrap items-center gap-4 rounded border border-gray-200 bg-gray-50 p-4">
         <span>
-          <strong>{unit.questions.length}</strong> question{unit.questions.length === 1 ? "" : "s"}
+          <strong>{byType.mc}</strong> multiple choice
+          {byType.issue > 0 && <>, <strong>{byType.issue}</strong> issue</>}
         </span>
         {unit.questions.length > 0 ? (
           <Link href={`${base}/test`} className="rounded bg-blue-700 px-4 py-2 text-white">

@@ -1,7 +1,7 @@
 // Hand-written validators. They return a list of problems (empty = valid)
 // so the loader can report every issue in a file at once.
 
-import type { NoteFrontmatter, Question } from "./types";
+import type { IssueSpec, NoteFrontmatter, Question } from "./types";
 
 type Problems = string[];
 
@@ -132,6 +132,17 @@ export function validateTopics(raw: unknown): { ok: true; value: string[] } | { 
   return { ok: true, value: (raw.topics as string[]).map((t) => t.trim()).filter(Boolean) };
 }
 
+/**
+ * Turn a ruleNote reference into a content-relative note path. Accepts "unit/notes/x.md",
+ * "<course>/unit/notes/x.md", or "content/<course>/unit/notes/x.md".
+ */
+export function normaliseRuleNoteRef(ref: string, courseSlug: string): string {
+  let r = ref.trim().replace(/\\/g, "/").replace(/^\.?\//, "");
+  if (r.startsWith("content/")) r = r.slice("content/".length);
+  if (!r.startsWith(`${courseSlug}/`)) r = `${courseSlug}/${r}`;
+  return r;
+}
+
 export function validateQuestion(
   raw: unknown,
   courseSlug: string,
@@ -139,10 +150,42 @@ export function validateQuestion(
 ): { ok: true; value: Question } | { ok: false; problems: Problems } {
   if (!isRecord(raw)) return { ok: false, problems: ["question must be an object"] };
   const problems: Problems = [];
+  const type = raw.type === undefined ? "mc" : raw.type;
+  if (type !== "mc" && type !== "issue") {
+    return { ok: false, problems: [`"type" must be "mc" or "issue" (or absent for multiple choice), got ${JSON.stringify(raw.type)}`] };
+  }
   requireString(raw, "id", problems);
+  if (raw.tags !== undefined) requireStringList(raw, "tags", problems);
+  const tags = Array.isArray(raw.tags) ? (raw.tags as string[]) : [];
+
+  if (type === "issue") {
+    requireString(raw, "factPattern", problems);
+    const minutes = raw.minutes;
+    if (typeof minutes !== "number" || !(minutes > 0)) problems.push(`"minutes" must be a positive number`);
+    const issues: IssueSpec[] = [];
+    if (!Array.isArray(raw.issues) || raw.issues.length === 0) {
+      problems.push(`"issues" must be a non-empty list of { name, ruleNote, modelAnalysis }`);
+    } else {
+      raw.issues.forEach((it, i) => {
+        if (!isRecord(it)) {
+          problems.push(`issue ${i} must be an object`);
+          return;
+        }
+        const sub: Problems = [];
+        for (const k of ["name", "ruleNote", "modelAnalysis"]) requireString(it, k, sub);
+        if (sub.length) problems.push(`issue ${i}: ${sub.join("; ")}`);
+        else issues.push({ name: it.name as string, ruleNote: it.ruleNote as string, ruleNotePath: normaliseRuleNoteRef(it.ruleNote as string, courseSlug), modelAnalysis: it.modelAnalysis as string });
+      });
+    }
+    if (problems.length) return { ok: false, problems };
+    return {
+      ok: true,
+      value: { type: "issue", id: (raw.id as string).trim(), factPattern: raw.factPattern as string, issues, tags, minutes: minutes as number, courseSlug, unitSlug },
+    };
+  }
+
   requireString(raw, "stem", problems);
   requireString(raw, "explanation", problems);
-
   const choices = raw.choices;
   if (!Array.isArray(choices) || choices.length < 2 || !choices.every((c) => typeof c === "string")) {
     problems.push(`"choices" must be a list of at least 2 strings`);
@@ -153,18 +196,17 @@ export function validateQuestion(
   } else if (Array.isArray(choices) && ((answer as number) < 0 || (answer as number) >= choices.length)) {
     problems.push(`"answer" ${answer} is out of range for ${choices.length} choices`);
   }
-  if (raw.tags !== undefined) requireStringList(raw, "tags", problems);
-
   if (problems.length) return { ok: false, problems };
   return {
     ok: true,
     value: {
+      type: "mc",
       id: (raw.id as string).trim(),
       stem: raw.stem as string,
       choices: choices as string[],
       answer: answer as number,
       explanation: raw.explanation as string,
-      tags: (raw.tags as string[] | undefined) ?? [],
+      tags,
       courseSlug,
       unitSlug,
     },

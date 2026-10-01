@@ -22,7 +22,7 @@ export function tagStats(course: Course): TagStat[] {
     .prepare(
       `SELECT j.value AS tag, COUNT(*) AS seen, SUM(CASE WHEN aq.is_correct = 0 THEN 1 ELSE 0 END) AS missed
        FROM attempt_questions aq, json_each(aq.tags) j
-       WHERE aq.course_slug = ?
+       WHERE aq.course_slug = ? AND NOT (aq.question_type = 'issue' AND aq.graded_at IS NULL)
        GROUP BY j.value`,
     )
     .all(course.slug) as { tag: string; seen: number; missed: number }[];
@@ -50,12 +50,16 @@ export function questionsWithTags(course: Course, tags: string[]): Question[] {
   return course.units.flatMap((u) => u.questions.filter((q) => q.tags.some((t) => set.has(t))));
 }
 
-/** Distinct ids of questions missed (wrong or unanswered) in any attempt. Optionally only one unit's questions. */
+// A missed question is a wrong or unanswered multiple-choice question, or a graded issue question with any
+// issue missed or given the wrong rule. Ungraded issue questions are neither right nor wrong yet.
+const MISSED = "is_correct = 0 AND NOT (question_type = 'issue' AND graded_at IS NULL)";
+
+/** Distinct ids of questions missed in any attempt. Optionally only one unit's questions. */
 export function missedQuestionIds(courseSlug: string, unitSlug?: string): string[] {
   const db = getDb();
   const rows = unitSlug
-    ? db.prepare("SELECT DISTINCT question_id FROM attempt_questions WHERE course_slug = ? AND unit_slug = ? AND is_correct = 0").all(courseSlug, unitSlug)
-    : db.prepare("SELECT DISTINCT question_id FROM attempt_questions WHERE course_slug = ? AND is_correct = 0").all(courseSlug);
+    ? db.prepare(`SELECT DISTINCT question_id FROM attempt_questions WHERE course_slug = ? AND unit_slug = ? AND ${MISSED}`).all(courseSlug, unitSlug)
+    : db.prepare(`SELECT DISTINCT question_id FROM attempt_questions WHERE course_slug = ? AND ${MISSED}`).all(courseSlug);
   return (rows as { question_id: string }[]).map((r) => r.question_id);
 }
 
@@ -63,7 +67,7 @@ export function missedQuestionIds(courseSlug: string, unitSlug?: string): string
 export function missedInAttempt(attemptId: number): string[] {
   return (
     getDb()
-      .prepare("SELECT question_id FROM attempt_questions WHERE attempt_id = ? AND is_correct = 0 ORDER BY position")
+      .prepare(`SELECT question_id FROM attempt_questions WHERE attempt_id = ? AND ${MISSED} ORDER BY position`)
       .all(attemptId) as { question_id: string }[]
   ).map((r) => r.question_id);
 }

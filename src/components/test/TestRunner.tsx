@@ -7,7 +7,16 @@ import { useRouter } from "next/navigation";
 import { submitAttempt } from "@/app/actions";
 import { choiceLetter, formatDuration } from "@/lib/format";
 
-export type RunnerQuestion = { id: string; courseSlug: string; unitSlug: string; stem: string; choices: string[] };
+export type RunnerQuestion =
+  | { kind: "mc"; id: string; courseSlug: string; unitSlug: string; stem: string; choices: string[] }
+  | { kind: "issue"; id: string; courseSlug: string; unitSlug: string; factPattern: string; minutes: number };
+
+/** Multiple-choice answers are a choice index; issue answers are the written text. */
+type Answer = number | string | null;
+
+function isAnswered(a: Answer): boolean {
+  return typeof a === "number" || (typeof a === "string" && a.trim() !== "");
+}
 
 type Props = {
   courseSlug: string;
@@ -24,7 +33,7 @@ export default function TestRunner(props: Props) {
   const { questions, timeLimitSeconds } = props;
   const router = useRouter();
   const [index, setIndex] = useState(0);
-  const [answers, setAnswers] = useState<(number | null)[]>(() => questions.map(() => null));
+  const [answers, setAnswers] = useState<Answer[]>(() => questions.map(() => null));
   const [flags, setFlags] = useState<boolean[]>(() => questions.map(() => false));
   const [remaining, setRemaining] = useState(timeLimitSeconds);
   const [confirming, setConfirming] = useState(false);
@@ -55,13 +64,17 @@ export default function TestRunner(props: Props) {
         timeLimitSeconds,
         timeUsedSeconds: auto ? timeLimitSeconds : timeLimitSeconds - secondsLeft,
         autoSubmitted: auto,
-        questions: questions.map((q, i) => ({
-          id: q.id,
-          courseSlug: q.courseSlug,
-          unitSlug: q.unitSlug,
-          selected: latest.current.answers[i],
-          flagged: latest.current.flags[i],
-        })),
+        questions: questions.map((q, i) => {
+          const a = latest.current.answers[i];
+          return {
+            id: q.id,
+            courseSlug: q.courseSlug,
+            unitSlug: q.unitSlug,
+            selected: typeof a === "number" ? a : null,
+            written: typeof a === "string" ? a : "",
+            flagged: latest.current.flags[i],
+          };
+        }),
       });
       if (result.ok) {
         router.replace(`/attempts/${result.attemptId}`);
@@ -98,12 +111,18 @@ export default function TestRunner(props: Props) {
   }, []);
 
   const q = questions[index];
-  const unansweredCount = answers.filter((a) => a === null).length;
+  const unansweredCount = answers.filter((a) => !isAnswered(a)).length;
+  const mcCount = questions.filter((x) => x.kind === "mc").length;
+  const issueCount = questions.length - mcCount;
+  const issueNumber = index - mcCount + 1;
   const flaggedCount = flags.filter(Boolean).length;
   const low = remaining <= 60;
 
   function choose(choice: number) {
     setAnswers((prev) => prev.map((a, i) => (i === index ? (a === choice ? null : choice) : a)));
+  }
+  function write(text: string) {
+    setAnswers((prev) => prev.map((a, i) => (i === index ? text : a)));
   }
   function toggleFlag() {
     setFlags((prev) => prev.map((f, i) => (i === index ? !f : f)));
@@ -121,9 +140,15 @@ export default function TestRunner(props: Props) {
           </span>
         </div>
 
+        {mcCount > 0 && issueCount > 0 && (
+          <p className="mb-2 text-xs uppercase tracking-wide text-gray-500">
+            {q.kind === "mc" ? `Part 1 · multiple choice (${mcCount})` : `Part 2 · issue spotting (${issueCount})`}
+          </p>
+        )}
         <div className="mb-2 flex items-center justify-between">
           <h1 className="text-lg font-semibold">
-            Question {index + 1} of {questions.length}
+            {q.kind === "mc" ? `Question ${index + 1} of ${questions.length}` : `Issue question ${issueNumber} of ${issueCount}`}
+            {q.kind === "issue" && <span className="ml-2 text-sm font-normal text-gray-500">suggested {q.minutes} min</span>}
           </h1>
           <button
             type="button"
@@ -134,6 +159,20 @@ export default function TestRunner(props: Props) {
           </button>
         </div>
 
+        {q.kind === "issue" ? (
+          <>
+            <p className="mb-3 whitespace-pre-line rounded border border-gray-200 bg-gray-50 p-3">{q.factPattern}</p>
+            <textarea
+              value={typeof answers[index] === "string" ? (answers[index] as string) : ""}
+              onChange={(e) => write(e.target.value)}
+              rows={16}
+              spellCheck={false}
+              placeholder="Spot the issues and analyse them. Nothing is checked until you submit and grade yourself."
+              className="w-full rounded border border-gray-300 px-3 py-2 font-sans"
+            />
+          </>
+        ) : (
+        <>
         <p className="mb-4 whitespace-pre-line">{q.stem}</p>
 
         <ol className="space-y-2">
@@ -154,6 +193,8 @@ export default function TestRunner(props: Props) {
             );
           })}
         </ol>
+        </>
+        )}
 
         <div className="mt-6 flex items-center gap-2">
           <button type="button" disabled={index === 0} onClick={() => setIndex(index - 1)} className="rounded border border-gray-300 px-3 py-1 disabled:opacity-40">
@@ -174,7 +215,7 @@ export default function TestRunner(props: Props) {
         <h2 className="mb-2 text-sm font-semibold">Navigator</h2>
         <div className="grid grid-cols-5 gap-1">
           {questions.map((_, i) => {
-            const answered = answers[i] !== null;
+            const answered = isAnswered(answers[i]);
             const flagged = flags[i];
             const current = i === index;
             return (
@@ -182,7 +223,7 @@ export default function TestRunner(props: Props) {
                 key={i}
                 type="button"
                 onClick={() => setIndex(i)}
-                title={`Question ${i + 1}: ${answered ? "answered" : "unanswered"}${flagged ? ", flagged" : ""}`}
+                title={`${questions[i].kind === "issue" ? "Issue question" : "Question"} ${i + 1}: ${answered ? "answered" : "unanswered"}${flagged ? ", flagged" : ""}`}
                 className={[
                   "h-8 rounded border text-xs",
                   answered ? "bg-gray-800 text-white border-gray-800" : "bg-white border-gray-400",
@@ -190,7 +231,7 @@ export default function TestRunner(props: Props) {
                   current ? "outline outline-2 outline-blue-700 outline-offset-1" : "",
                 ].join(" ")}
               >
-                {i + 1}
+                {questions[i].kind === "issue" ? `I${i - mcCount + 1}` : i + 1}
               </button>
             );
           })}
@@ -207,7 +248,7 @@ export default function TestRunner(props: Props) {
           <div className="w-full max-w-sm rounded bg-white p-5 shadow">
             <h2 className="mb-2 text-lg font-semibold">Submit test?</h2>
             <p className="mb-1">
-              {unansweredCount === 0 ? "All questions answered." : `${unansweredCount} unanswered question${unansweredCount === 1 ? "" : "s"} will be marked wrong.`}
+              {unansweredCount === 0 ? "All questions answered." : `${unansweredCount} unanswered question${unansweredCount === 1 ? "" : "s"} will be marked wrong (a blank issue answer still goes to grading).`}
             </p>
             {flaggedCount > 0 && <p className="mb-1 text-sm text-gray-600">{flaggedCount} flagged for review.</p>}
             <p className="mb-4 text-sm text-gray-600">Time remaining: {formatDuration(remaining)}</p>

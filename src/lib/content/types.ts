@@ -53,7 +53,8 @@ export type Note = {
   body: string;
 };
 
-export type Question = {
+export type McQuestion = {
+  type: "mc";
   id: string;
   stem: string;
   choices: string[];
@@ -63,6 +64,29 @@ export type Question = {
   courseSlug: string;
   unitSlug: string;
 };
+
+export type IssueSpec = {
+  name: string;
+  /** The ruleNote reference exactly as written in questions.json */
+  ruleNote: string;
+  /** Resolved content-relative path of the rule note, e.g. "property/adverse-possession/notes/elements.md" */
+  ruleNotePath: string;
+  modelAnalysis: string;
+};
+
+/** An issue-spotter question: a fact pattern, a timed written answer, self-graded against a list of issues. */
+export type IssueQuestion = {
+  type: "issue";
+  id: string;
+  factPattern: string;
+  issues: IssueSpec[];
+  tags: string[];
+  minutes: number;
+  courseSlug: string;
+  unitSlug: string;
+};
+
+export type Question = McQuestion | IssueQuestion;
 
 export type Unit = {
   slug: string;

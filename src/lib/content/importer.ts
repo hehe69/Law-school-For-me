@@ -2,6 +2,8 @@
 // exactly 5 choices, and ids must be new within the course.
 
 import type { Course, Unit } from "./types";
+import { findRuleNote } from "./loader";
+import { normaliseRuleNoteRef } from "./validate";
 
 export type ImportMode = "append" | "replace";
 
@@ -11,14 +13,16 @@ export type ImportError = {
   message: string;
 };
 
-export type ImportQuestion = {
+export type ImportMc = { type: "mc"; id: string; stem: string; choices: string[]; answer: number; explanation: string; tags: string[] };
+export type ImportIssue = {
+  type: "issue";
   id: string;
-  stem: string;
-  choices: string[];
-  answer: number;
-  explanation: string;
+  factPattern: string;
+  issues: { name: string; ruleNote: string; modelAnalysis: string }[];
   tags: string[];
+  minutes: number;
 };
+export type ImportQuestion = ImportMc | ImportIssue;
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
@@ -32,27 +36,70 @@ function describe(v: unknown): string {
   return `${t === "object" ? "an" : "a"} ${t}`;
 }
 
-/** Check one pasted question. Returns the cleaned question or plain-language problems. */
-export function checkImportQuestion(raw: unknown): { ok: true; value: ImportQuestion } | { ok: false; problems: string[] } {
-  if (!isRecord(raw)) return { ok: false, problems: [`is ${describe(raw)}, not an object with id, stem, choices, answer, explanation`] };
+/** Check one pasted question (either type). Returns the cleaned question or plain-language problems. */
+export function checkImportQuestion(raw: unknown, course?: Course): { ok: true; value: ImportQuestion } | { ok: false; problems: string[] } {
+  if (!isRecord(raw)) return { ok: false, problems: [`is ${describe(raw)}, not an object with id, stem, choices, answer, explanation (or type "issue")`] };
   const problems: string[] = [];
 
-  const text = (key: string): string => {
-    const v = raw[key];
+  const text = (obj: Record<string, unknown>, key: string, label = key): string => {
+    const v = obj[key];
     if (typeof v !== "string") {
-      problems.push(`"${key}" is ${describe(v)}; it must be text`);
+      problems.push(`"${label}" is ${describe(v)}; it must be text`);
       return "";
     }
     if (v.trim() === "") {
-      problems.push(`"${key}" is empty`);
+      problems.push(`"${label}" is empty`);
       return "";
     }
     return v;
   };
 
-  const id = text("id").trim();
-  const stem = text("stem");
-  const explanation = text("explanation");
+  const type = raw.type === undefined ? "mc" : raw.type;
+  if (type !== "mc" && type !== "issue") {
+    return { ok: false, problems: [`"type" is ${JSON.stringify(raw.type)}; it must be "issue", "mc", or left out for multiple choice`] };
+  }
+  const id = text(raw, "id").trim();
+
+  let tags: string[] = [];
+  if (raw.tags !== undefined) {
+    if (!Array.isArray(raw.tags) || !raw.tags.every((t) => typeof t === "string")) {
+      problems.push(`"tags" is ${describe(raw.tags)}; it must be a list of strings like ["tacking", "wisconsin"]`);
+    } else {
+      tags = raw.tags.map((t) => t.trim()).filter(Boolean);
+    }
+  }
+
+  if (type === "issue") {
+    const factPattern = text(raw, "factPattern");
+    const minutes = raw.minutes;
+    if (typeof minutes !== "number" || !(minutes > 0)) problems.push(`"minutes" is ${typeof minutes === "number" ? minutes : describe(minutes)}; it must be a positive number like 20`);
+    const issues: ImportIssue["issues"] = [];
+    if (!Array.isArray(raw.issues) || raw.issues.length === 0) {
+      problems.push(`"issues" is ${Array.isArray(raw.issues) ? "an empty list" : describe(raw.issues)}; it needs at least one { name, ruleNote, modelAnalysis }`);
+    } else {
+      raw.issues.forEach((it, i) => {
+        if (!isRecord(it)) {
+          problems.push(`issue ${i} is ${describe(it)}, not an object`);
+          return;
+        }
+        const name = text(it, "name", `issues[${i}].name`);
+        const ruleNote = text(it, "ruleNote", `issues[${i}].ruleNote`);
+        const modelAnalysis = text(it, "modelAnalysis", `issues[${i}].modelAnalysis`);
+        if (course && ruleNote) {
+          const resolved = normaliseRuleNoteRef(ruleNote, course.slug);
+          if (!findRuleNote(course, resolved)) {
+            problems.push(`issues[${i}].ruleNote "${ruleNote}" does not match any rule note in this course (expected something like "<unit>/notes/<file>.md")`);
+          }
+        }
+        issues.push({ name, ruleNote, modelAnalysis });
+      });
+    }
+    if (problems.length) return { ok: false, problems };
+    return { ok: true, value: { type: "issue", id, factPattern, issues, tags, minutes: minutes as number } };
+  }
+
+  const stem = text(raw, "stem");
+  const explanation = text(raw, "explanation");
 
   let choices: string[] = [];
   const rawChoices = raw.choices;
@@ -76,17 +123,8 @@ export function checkImportQuestion(raw: unknown): { ok: true; value: ImportQues
     answer = rawAnswer as number;
   }
 
-  let tags: string[] = [];
-  if (raw.tags !== undefined) {
-    if (!Array.isArray(raw.tags) || !raw.tags.every((t) => typeof t === "string")) {
-      problems.push(`"tags" is ${describe(raw.tags)}; it must be a list of strings like ["tacking", "wisconsin"]`);
-    } else {
-      tags = raw.tags.map((t) => t.trim()).filter(Boolean);
-    }
-  }
-
   if (problems.length) return { ok: false, problems };
-  return { ok: true, value: { id, stem, choices, answer, explanation, tags } };
+  return { ok: true, value: { type: "mc", id, stem, choices, answer, explanation, tags } };
 }
 
 /**
@@ -116,7 +154,7 @@ export function checkImportBatch(
 
   const seenInPaste = new Map<string, number>();
   parsed.forEach((item, index) => {
-    const result = checkImportQuestion(item);
+    const result = checkImportQuestion(item, course);
     if (!result.ok) {
       for (const p of result.problems) errors.push({ index, message: p });
       return;

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import TestRunner from "@/components/test/TestRunner";
-import { toInt, toRunnerQuestions } from "@/lib/testing";
+import { countByType, pickQuestions, timeLimitFor, toInt, toRunnerQuestions } from "@/lib/testing";
 import { DEFAULT_SECONDS_PER_QUESTION, findUnit, isPoolScope, loadContent, questionsForScope, SCOPE_LABELS } from "@/lib/content/loader";
 
 export const dynamic = "force-dynamic";
@@ -23,12 +23,24 @@ export default async function TestRunPage({ params, searchParams }: PageProps<"/
       </p>
     );
   }
-  const count = Math.min(pool.length, Math.max(1, toInt(sp.count, pool.length)));
+  const available = countByType(pool);
+  const format = sp.format === "issue" || sp.format === "mixed" ? sp.format : "mc";
+  const mcCount = format === "issue" ? 0 : Math.min(available.mc, Math.max(0, toInt(sp.count, available.mc)));
+  const issueCount = format === "mc" ? 0 : Math.min(available.issue, Math.max(0, toInt(sp.issues, available.issue)));
   const secondsPerQuestion = Math.min(3600, Math.max(5, toInt(sp.seconds, DEFAULT_SECONDS_PER_QUESTION)));
-  const timeLimitSeconds = count * secondsPerQuestion;
+  const picked = pickQuestions(pool, mcCount, issueCount);
+  if (picked.length === 0) {
+    return (
+      <p>
+        That format and count leaves no questions ({available.mc} multiple choice and {available.issue} issue available in scope).{" "}
+        <Link href={`${base}/test`} className="underline">Back to setup</Link>
+      </p>
+    );
+  }
+  const timeLimitSeconds = timeLimitFor(picked, secondsPerQuestion);
 
-  // Answers and explanations stay on the server; the client only gets what it needs to show the question.
-  const questions = toRunnerQuestions(pool, count);
+  // Answers, explanations, and issue lists stay on the server; the client only gets what it needs to show the question.
+  const questions = toRunnerQuestions(picked);
 
   return (
     <TestRunner
