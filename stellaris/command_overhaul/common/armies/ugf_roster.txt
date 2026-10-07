@@ -1,7 +1,7 @@
 # Army Restructured - player roster (generated v3)
 
 ugf_civil_militia = {
-	can_retreat = no
+	defensive = yes
 	damage = 0.5
 	health = 1.0
 	morale = 2.5
@@ -51,7 +51,7 @@ ugf_civil_militia = {
 }
 
 ugf_civil_militia_s1 = {
-	can_retreat = no
+	defensive = yes
 	damage = 0.5
 	health = 1.0
 	morale = 2.5
@@ -99,7 +99,7 @@ ugf_civil_militia_s1 = {
 }
 
 ugf_civil_militia_s2 = {
-	can_retreat = no
+	defensive = yes
 	damage = 0.5
 	health = 1.0
 	morale = 2.5
@@ -146,7 +146,7 @@ ugf_civil_militia_s2 = {
 }
 
 ugf_republican_guard = {
-	can_retreat = no
+	defensive = yes
 	damage = 3.0
 	health = 3.0
 	morale = 3.5
@@ -197,7 +197,7 @@ ugf_republican_guard = {
 }
 
 ugf_imperial_guard = {
-	can_retreat = no
+	defensive = yes
 	damage = 3.0
 	health = 3.0
 	morale = 3.5
@@ -329,6 +329,10 @@ ugf_infantry = {
 		}
 	}
 	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
 		from = {
 			NOR = {
 				has_trait = "trait_mechanical"

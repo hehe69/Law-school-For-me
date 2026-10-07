@@ -1,9 +1,16 @@
 namespace = ugf_guard
 
-# Capital Guards: 2 at each capital tier, granted once per tier via planet flags
+# Capital Guards: 2 at Planetary Administration tier, 4 at Major Capital tier,
+# 6 at System / Imperial Capital tier (habitat equivalents included).
+# Fired every month from on_monthly_pulse_country (this = country), see
+# common/on_actions/ugf_on_actions.txt.
+# Every owned colony with a capital building is topped up to its tier's target,
+# counting the ugf_capital_guard armies already standing on the planet, so the
+# event is safe to fire repeatedly, needs no planet flags, works on existing
+# saves, and replaces guards lost in ground combat.
 country_event = {
 	id = ugf_guard.1
-	hidden = yes
+	hide_window = yes
 	is_triggered_only = yes
 	trigger = {
 		is_gestalt = no
@@ -13,80 +20,87 @@ country_event = {
 			limit = {
 				has_owner = yes
 				has_ground_combat = no
+				OR = {
+					has_building = building_capital
+					has_building = building_hab_capital
+					has_building = building_major_capital
+					has_building = building_hab_major_capital
+					has_building = building_system_capital
+					has_building = building_imperial_capital
+					has_building = building_hab_system_capital
+				}
 			}
+			# Tier 3: System / Imperial capital -> 6 guards
 			if = {
 				limit = {
-					NOT = { has_planet_flag = ugf_cg_tier1 }
 					OR = {
-						has_building = building_capital
-						has_building = building_habitat_capital
+						has_building = building_system_capital
+						has_building = building_imperial_capital
+						has_building = building_hab_system_capital
+					}
+				}
+				while = {
+					count = 6
+					if = {
+						limit = {
+							count_planet_army = {
+								limit = { army_type = ugf_capital_guard }
+								count < 6
+							}
+						}
+						create_army = {
+							name = "ugf_capital_guard_army_name"
+							owner = root
+							species = root.species
+							type = ugf_capital_guard
+						}
+					}
+				}
+			}
+			# Tier 2: Major capital -> 4 guards
+			else_if = {
+				limit = {
+					OR = {
 						has_building = building_major_capital
 						has_building = building_hab_major_capital
-						has_building = building_system_capital
-						has_building = building_imperial_capital
-						has_building = building_hab_system_capital
 					}
 				}
-				set_planet_flag = ugf_cg_tier1
-				create_army = {
-					name = "ugf_capital_guard_army_name"
-					owner = root
-					species = root.species
-					type = ugf_capital_guard
-				}
-				create_army = {
-					name = "ugf_capital_guard_army_name"
-					owner = root
-					species = root.species
-					type = ugf_capital_guard
+				while = {
+					count = 4
+					if = {
+						limit = {
+							count_planet_army = {
+								limit = { army_type = ugf_capital_guard }
+								count < 4
+							}
+						}
+						create_army = {
+							name = "ugf_capital_guard_army_name"
+							owner = root
+							species = root.species
+							type = ugf_capital_guard
+						}
+					}
 				}
 			}
-			if = {
-				limit = {
-					NOT = { has_planet_flag = ugf_cg_tier2 }
-					OR = {
-						has_building = building_major_capital
-						has_building = building_hab_major_capital
-						has_building = building_system_capital
-						has_building = building_imperial_capital
-						has_building = building_hab_system_capital
+			# Tier 1: Planetary Administration -> 2 guards
+			else = {
+				while = {
+					count = 2
+					if = {
+						limit = {
+							count_planet_army = {
+								limit = { army_type = ugf_capital_guard }
+								count < 2
+							}
+						}
+						create_army = {
+							name = "ugf_capital_guard_army_name"
+							owner = root
+							species = root.species
+							type = ugf_capital_guard
+						}
 					}
-				}
-				set_planet_flag = ugf_cg_tier2
-				create_army = {
-					name = "ugf_capital_guard_army_name"
-					owner = root
-					species = root.species
-					type = ugf_capital_guard
-				}
-				create_army = {
-					name = "ugf_capital_guard_army_name"
-					owner = root
-					species = root.species
-					type = ugf_capital_guard
-				}
-			}
-			if = {
-				limit = {
-					NOT = { has_planet_flag = ugf_cg_tier3 }
-					OR = {
-						has_building = building_system_capital
-						has_building = building_imperial_capital
-						has_building = building_hab_system_capital
-					}
-				}
-				set_planet_flag = ugf_cg_tier3
-				create_army = {
-					name = "ugf_capital_guard_army_name"
-					owner = root
-					species = root.species
-					type = ugf_capital_guard
-				}
-				create_army = {
-					name = "ugf_capital_guard_army_name"
-					owner = root
-					species = root.species
-					type = ugf_capital_guard
 				}
 			}
 		}

@@ -25,6 +25,12 @@ defense_army = {
 		}
 	}
 	potential = {
+		planet = {
+			OR = {
+				has_active_building = building_stronghold
+				has_active_building = building_fortress
+			}
+		}
 		from = {
 			NOR = {
 				has_trait = "trait_mechanical"

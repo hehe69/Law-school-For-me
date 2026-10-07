@@ -1,4 +1,8 @@
-on_monthly_pulse = {
+# ugf_guard.1 is a country_event, so it must be attached to the on_action that
+# fires with this = country. on_monthly_pulse has no scope (vanilla comment:
+# "No scope, like on_game_start") and only carries scopeless `event = {}` ids;
+# on_monthly_pulse_country fires once per country every month with this = country.
+on_monthly_pulse_country = {
 	events = {
 		ugf_guard.1
 	}
