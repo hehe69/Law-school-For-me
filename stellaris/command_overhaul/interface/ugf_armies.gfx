@@ -1,0 +1,82 @@
+spriteTypes = {
+	spriteType = {
+		name = "GFX_army_type_civil_militia"
+		texturefile = "gfx/interface/icons/armies/army_type_civil_militia.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_planetary_guard"
+		texturefile = "gfx/interface/icons/armies/army_type_planetary_guard.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_republican_guard"
+		texturefile = "gfx/interface/icons/armies/army_type_republican_guard.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_garrison"
+		texturefile = "gfx/interface/icons/armies/army_type_garrison.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_interstellar_marine"
+		texturefile = "gfx/interface/icons/armies/army_type_interstellar_marine.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_special_forces"
+		texturefile = "gfx/interface/icons/armies/army_type_special_forces.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_supersoldier"
+		texturefile = "gfx/interface/icons/armies/army_type_supersoldier.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_mechanized"
+		texturefile = "gfx/interface/icons/armies/army_type_mechanized.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_all_terrain"
+		texturefile = "gfx/interface/icons/armies/army_type_all_terrain.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_cas"
+		texturefile = "gfx/interface/icons/armies/army_type_cas.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_odt"
+		texturefile = "gfx/interface/icons/armies/army_type_odt.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_motorized"
+		texturefile = "gfx/interface/icons/armies/army_type_motorized.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_incendiary"
+		texturefile = "gfx/interface/icons/armies/army_type_incendiary.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_fighter"
+		texturefile = "gfx/interface/icons/armies/army_type_fighter.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_bomber"
+		texturefile = "gfx/interface/icons/armies/army_type_bomber.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_armor"
+		texturefile = "gfx/interface/icons/armies/army_type_armor.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_siege_frame"
+		texturefile = "gfx/interface/icons/armies/army_type_siege_frame.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_swarm"
+		texturefile = "gfx/interface/icons/armies/army_type_swarm.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_warform"
+		texturefile = "gfx/interface/icons/armies/army_type_warform.dds"
+	}
+	spriteType = {
+		name = "GFX_army_type_capital_guard"
+		texturefile = "gfx/interface/icons/armies/army_type_capital_guard.dds"
+	}
+}

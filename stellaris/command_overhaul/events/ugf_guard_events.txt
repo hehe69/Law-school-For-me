@@ -1,0 +1,94 @@
+namespace = ugf_guard
+
+# Capital Guards: 2 at each capital tier, granted once per tier via planet flags
+country_event = {
+	id = ugf_guard.1
+	hidden = yes
+	is_triggered_only = yes
+	trigger = {
+		is_gestalt = no
+	}
+	immediate = {
+		every_owned_planet = {
+			limit = {
+				has_owner = yes
+				has_ground_combat = no
+			}
+			if = {
+				limit = {
+					NOT = { has_planet_flag = ugf_cg_tier1 }
+					OR = {
+						has_building = building_capital
+						has_building = building_habitat_capital
+						has_building = building_major_capital
+						has_building = building_hab_major_capital
+						has_building = building_system_capital
+						has_building = building_imperial_capital
+						has_building = building_hab_system_capital
+					}
+				}
+				set_planet_flag = ugf_cg_tier1
+				create_army = {
+					name = "ugf_capital_guard_army_name"
+					owner = root
+					species = root.species
+					type = ugf_capital_guard
+				}
+				create_army = {
+					name = "ugf_capital_guard_army_name"
+					owner = root
+					species = root.species
+					type = ugf_capital_guard
+				}
+			}
+			if = {
+				limit = {
+					NOT = { has_planet_flag = ugf_cg_tier2 }
+					OR = {
+						has_building = building_major_capital
+						has_building = building_hab_major_capital
+						has_building = building_system_capital
+						has_building = building_imperial_capital
+						has_building = building_hab_system_capital
+					}
+				}
+				set_planet_flag = ugf_cg_tier2
+				create_army = {
+					name = "ugf_capital_guard_army_name"
+					owner = root
+					species = root.species
+					type = ugf_capital_guard
+				}
+				create_army = {
+					name = "ugf_capital_guard_army_name"
+					owner = root
+					species = root.species
+					type = ugf_capital_guard
+				}
+			}
+			if = {
+				limit = {
+					NOT = { has_planet_flag = ugf_cg_tier3 }
+					OR = {
+						has_building = building_system_capital
+						has_building = building_imperial_capital
+						has_building = building_hab_system_capital
+					}
+				}
+				set_planet_flag = ugf_cg_tier3
+				create_army = {
+					name = "ugf_capital_guard_army_name"
+					owner = root
+					species = root.species
+					type = ugf_capital_guard
+				}
+				create_army = {
+					name = "ugf_capital_guard_army_name"
+					owner = root
+					species = root.species
+					type = ugf_capital_guard
+				}
+			}
+		}
+	}
+}

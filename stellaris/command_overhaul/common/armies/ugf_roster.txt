@@ -1,0 +1,3140 @@
+# Army Restructured - player roster (generated v3)
+
+ugf_civil_militia = {
+	can_retreat = no
+	damage = 0.5
+	health = 1.0
+	morale = 2.5
+	morale_damage = 1.0
+	collateral_damage = 0.2
+	war_exhaustion = 1.0
+	time = 100
+	icon = GFX_army_type_civil_militia
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			food = 100
+		}
+		upkeep = {
+			energy = 0.1
+			food = 0.25
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		NOR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_civil_militia_s1 = {
+	can_retreat = no
+	damage = 0.5
+	health = 1.0
+	morale = 2.5
+	morale_damage = 1.0
+	collateral_damage = 0.2
+	war_exhaustion = 1.0
+	time = 50
+	icon = GFX_army_type_civil_militia
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			food = 100
+		}
+		upkeep = {
+			energy = 0.1
+			food = 0.25
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		planet = { has_building = building_stronghold }
+		NOT = { planet = { has_building = building_fortress } }
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_civil_militia_s2 = {
+	can_retreat = no
+	damage = 0.5
+	health = 1.0
+	morale = 2.5
+	morale_damage = 1.0
+	collateral_damage = 0.2
+	war_exhaustion = 1.0
+	time = 40
+	icon = GFX_army_type_civil_militia
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			food = 100
+		}
+		upkeep = {
+			energy = 0.1
+			food = 0.25
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		planet = { has_building = building_fortress }
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_republican_guard = {
+	can_retreat = no
+	damage = 3.0
+	health = 3.0
+	morale = 3.5
+	morale_damage = 1.75
+	collateral_damage = 1.0
+	war_exhaustion = 2.0
+	time = 200
+	icon = GFX_army_type_republican_guard
+	prerequisites = { "tech_assault_armies" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+		}
+		upkeep = {
+			energy = 1
+		}
+	}
+	potential_country = {
+		OR = {
+			has_ethic = ethic_egalitarian
+			has_ethic = ethic_fanatic_egalitarian
+			has_civic = civic_parliamentary_system
+		}
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		planet = { is_capital = yes }
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_imperial_guard = {
+	can_retreat = no
+	damage = 3.0
+	health = 3.0
+	morale = 3.5
+	morale_damage = 1.75
+	collateral_damage = 1.0
+	war_exhaustion = 2.0
+	time = 200
+	icon = GFX_army_type_republican_guard
+	prerequisites = { "tech_assault_armies" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+		}
+		upkeep = {
+			energy = 1
+		}
+	}
+	potential_country = {
+		OR = {
+			has_ethic = ethic_authoritarian
+			has_ethic = ethic_fanatic_authoritarian
+			has_authority = auth_imperial
+		}
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		planet = { is_capital = yes }
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_garrison = {
+	damage = 0.8
+	health = 2.5
+	morale = 3.0
+	morale_damage = 1.0
+	collateral_damage = 0.3
+	war_exhaustion = 0.5
+	time = 80
+	icon = GFX_army_type_garrison
+	prerequisites = { "tech_assault_armies" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			food = 50
+		}
+		upkeep = {
+			energy = 0.1
+			food = 0.25
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_infantry = {
+	damage = 1.5
+	health = 2.0
+	morale = 2.5
+	morale_damage = 1.0
+	collateral_damage = 1.0
+	war_exhaustion = 1.0
+	time = 100
+	icon = GFX_army_type_assault
+	prerequisites = { "tech_assault_armies" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+		}
+		upkeep = {
+			energy = 0.25
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_incendiary = {
+	damage = 2.0
+	health = 0.8
+	morale = 0.75
+	morale_damage = 2.5
+	collateral_damage = 2.0
+	war_exhaustion = 1.0
+	time = 120
+	icon = GFX_army_type_incendiary
+	prerequisites = { "tech_assault_armies" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+		}
+		upkeep = {
+			energy = 1
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_marine = {
+	damage = 1.5
+	health = 2.0
+	morale = 1.5
+	morale_damage = 3.0
+	collateral_damage = 2.0
+	war_exhaustion = 1.0
+	time = 140
+	icon = GFX_army_type_interstellar_marine
+	prerequisites = { "tech_assault_armies" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+		}
+		upkeep = {
+			energy = 0.5
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_navel_base }
+			planet = { has_building = building_navel_command }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_special_forces = {
+	damage = 1.25
+	health = 3.5
+	morale = 1.0
+	morale_damage = 3.0
+	collateral_damage = 2.0
+	war_exhaustion = 1.5
+	time = 200
+	icon = GFX_army_type_special_forces
+	prerequisites = { "tech_centralized_command" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+		}
+		upkeep = {
+			energy = 1
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_odst = {
+	damage = 2.5
+	health = 3.0
+	morale = 2.5
+	morale_damage = 4.0
+	collateral_damage = 1.5
+	war_exhaustion = 1.5
+	time = 160
+	icon = GFX_army_type_odt
+	prerequisites = { "tech_strike_craft_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		NOT = { has_technology = tech_ship_armor_1 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_navel_base }
+			planet = { has_building = building_navel_command }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_odst_a1 = {
+	damage = 2.5
+	health = 3.06
+	morale = 2.5
+	morale_damage = 4.0
+	collateral_damage = 1.5
+	war_exhaustion = 1.5
+	time = 160
+	icon = GFX_army_type_odt
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_1
+		NOT = { has_technology = tech_ship_armor_2 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_navel_base }
+			planet = { has_building = building_navel_command }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_odst_a2 = {
+	damage = 2.5
+	health = 3.12
+	morale = 2.5
+	morale_damage = 4.0
+	collateral_damage = 1.5
+	war_exhaustion = 1.5
+	time = 160
+	icon = GFX_army_type_odt
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_2" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_2
+		NOT = { has_technology = tech_ship_armor_3 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_navel_base }
+			planet = { has_building = building_navel_command }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_odst_a3 = {
+	damage = 2.5
+	health = 3.18
+	morale = 2.5
+	morale_damage = 4.0
+	collateral_damage = 1.5
+	war_exhaustion = 1.5
+	time = 160
+	icon = GFX_army_type_odt
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_3" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_3
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_navel_base }
+			planet = { has_building = building_navel_command }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_supersoldier = {
+	damage = 3.0
+	health = 5.0
+	morale = 5.0
+	morale_damage = 8.0
+	collateral_damage = 3.0
+	war_exhaustion = 4.0
+	time = 800
+	icon = GFX_army_type_supersoldier
+	prerequisites = { "tech_gene_tailoring" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 350
+			alloys = 50
+		}
+		upkeep = {
+			energy = 2
+			trade = 0.5
+		}
+	}
+	potential_country = {
+		NOT = { has_technology = tech_ship_armor_1 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_medical_2 }
+			planet = { has_building = building_medical_3 }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_supersoldier_a1 = {
+	damage = 3.0
+	health = 5.1
+	morale = 5.0
+	morale_damage = 8.0
+	collateral_damage = 3.0
+	war_exhaustion = 4.0
+	time = 800
+	icon = GFX_army_type_supersoldier
+	prerequisites = { "tech_gene_tailoring" "tech_ship_armor_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 350
+			alloys = 50
+		}
+		upkeep = {
+			energy = 2
+			trade = 0.5
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_1
+		NOT = { has_technology = tech_ship_armor_2 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_medical_2 }
+			planet = { has_building = building_medical_3 }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_supersoldier_a2 = {
+	damage = 3.0
+	health = 5.2
+	morale = 5.0
+	morale_damage = 8.0
+	collateral_damage = 3.0
+	war_exhaustion = 4.0
+	time = 800
+	icon = GFX_army_type_supersoldier
+	prerequisites = { "tech_gene_tailoring" "tech_ship_armor_2" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 350
+			alloys = 50
+		}
+		upkeep = {
+			energy = 2
+			trade = 0.5
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_2
+		NOT = { has_technology = tech_ship_armor_3 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_medical_2 }
+			planet = { has_building = building_medical_3 }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_supersoldier_a3 = {
+	damage = 3.0
+	health = 5.3
+	morale = 5.0
+	morale_damage = 8.0
+	collateral_damage = 3.0
+	war_exhaustion = 4.0
+	time = 800
+	icon = GFX_army_type_supersoldier
+	prerequisites = { "tech_gene_tailoring" "tech_ship_armor_3" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 350
+			alloys = 50
+		}
+		upkeep = {
+			energy = 2
+			trade = 0.5
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_3
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_medical_2 }
+			planet = { has_building = building_medical_3 }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_motorized = {
+	damage = 2.0
+	health = 1.5
+	morale = 1.0
+	morale_damage = 1.0
+	collateral_damage = 1.5
+	war_exhaustion = 1.0
+	time = 100
+	icon = GFX_army_type_motorized
+	prerequisites = { "tech_assault_armies" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+		}
+		upkeep = {
+			energy = 0.75
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		NOT = { has_technology = tech_ship_armor_1 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_motorized_a1 = {
+	damage = 2.0
+	health = 1.52
+	morale = 1.0
+	morale_damage = 1.0
+	collateral_damage = 1.5
+	war_exhaustion = 1.0
+	time = 100
+	icon = GFX_army_type_motorized
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+		}
+		upkeep = {
+			energy = 0.75
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_1
+		NOT = { has_technology = tech_ship_armor_2 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_motorized_a2 = {
+	damage = 2.0
+	health = 1.53
+	morale = 1.0
+	morale_damage = 1.0
+	collateral_damage = 1.5
+	war_exhaustion = 1.0
+	time = 100
+	icon = GFX_army_type_motorized
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_2" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+		}
+		upkeep = {
+			energy = 0.75
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_2
+		NOT = { has_technology = tech_ship_armor_3 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_motorized_a3 = {
+	damage = 2.0
+	health = 1.54
+	morale = 1.0
+	morale_damage = 1.0
+	collateral_damage = 1.5
+	war_exhaustion = 1.0
+	time = 100
+	icon = GFX_army_type_motorized
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_3" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+		}
+		upkeep = {
+			energy = 0.75
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_3
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_mechanized = {
+	damage = 2.5
+	health = 2.5
+	morale = 1.0
+	morale_damage = 1.5
+	collateral_damage = 1.5
+	war_exhaustion = 1.9
+	time = 120
+	icon = GFX_army_type_mechanized
+	prerequisites = { "tech_assault_armies" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		NOT = { has_technology = tech_ship_armor_1 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_mechanized_a1 = {
+	damage = 2.5
+	health = 2.62
+	morale = 1.0
+	morale_damage = 1.5
+	collateral_damage = 1.5
+	war_exhaustion = 1.9
+	time = 120
+	icon = GFX_army_type_mechanized
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_1
+		NOT = { has_technology = tech_ship_armor_2 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_mechanized_a2 = {
+	damage = 2.5
+	health = 2.75
+	morale = 1.0
+	morale_damage = 1.5
+	collateral_damage = 1.5
+	war_exhaustion = 1.9
+	time = 120
+	icon = GFX_army_type_mechanized
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_2" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_2
+		NOT = { has_technology = tech_ship_armor_3 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_mechanized_a3 = {
+	damage = 2.5
+	health = 2.88
+	morale = 1.0
+	morale_damage = 1.5
+	collateral_damage = 1.5
+	war_exhaustion = 1.9
+	time = 120
+	icon = GFX_army_type_mechanized
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_3" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_3
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_all_terrain = {
+	damage = 1.0
+	health = 3.0
+	morale = 1.0
+	morale_damage = 1.5
+	collateral_damage = 2.0
+	war_exhaustion = 1.9
+	time = 180
+	icon = GFX_army_type_all_terrain
+	prerequisites = { "tech_assault_armies" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		NOT = { has_technology = tech_ship_armor_1 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_navel_base }
+			planet = { has_building = building_navel_command }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_all_terrain_a1 = {
+	damage = 1.0
+	health = 3.12
+	morale = 1.0
+	morale_damage = 1.5
+	collateral_damage = 2.0
+	war_exhaustion = 1.9
+	time = 180
+	icon = GFX_army_type_all_terrain
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_1
+		NOT = { has_technology = tech_ship_armor_2 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_navel_base }
+			planet = { has_building = building_navel_command }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_all_terrain_a2 = {
+	damage = 1.0
+	health = 3.24
+	morale = 1.0
+	morale_damage = 1.5
+	collateral_damage = 2.0
+	war_exhaustion = 1.9
+	time = 180
+	icon = GFX_army_type_all_terrain
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_2" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_2
+		NOT = { has_technology = tech_ship_armor_3 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_navel_base }
+			planet = { has_building = building_navel_command }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_all_terrain_a3 = {
+	damage = 1.0
+	health = 3.36
+	morale = 1.0
+	morale_damage = 1.5
+	collateral_damage = 2.0
+	war_exhaustion = 1.9
+	time = 180
+	icon = GFX_army_type_all_terrain
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_3" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_3
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_navel_base }
+			planet = { has_building = building_navel_command }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_armor = {
+	damage = 3.0
+	health = 3.5
+	morale = 1.0
+	morale_damage = 2.5
+	collateral_damage = 2.0
+	war_exhaustion = 2.0
+	time = 200
+	icon = GFX_army_type_armor
+	prerequisites = { "tech_assault_armies" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 15
+		}
+		upkeep = {
+			energy = 2
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		NOT = { has_technology = tech_ship_armor_1 }
+		NOT = { has_technology = tech_volatile_motes }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_armor_m = {
+	damage = 3.3
+	health = 3.5
+	morale = 1.0
+	morale_damage = 2.5
+	collateral_damage = 2.0
+	war_exhaustion = 2.0
+	time = 200
+	icon = GFX_army_type_armor
+	prerequisites = { "tech_assault_armies" "tech_volatile_motes" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 15
+		}
+		upkeep = {
+			energy = 2.1
+			trade = 0.21
+		}
+	}
+	potential_country = {
+		NOT = { has_technology = tech_ship_armor_1 }
+		has_technology = tech_volatile_motes
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_armor_a1 = {
+	damage = 3.0
+	health = 3.85
+	morale = 1.0
+	morale_damage = 2.5
+	collateral_damage = 2.0
+	war_exhaustion = 2.0
+	time = 200
+	icon = GFX_army_type_armor
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 15
+		}
+		upkeep = {
+			energy = 2
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_1
+		NOT = { has_technology = tech_ship_armor_2 }
+		NOT = { has_technology = tech_volatile_motes }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_armor_a1_m = {
+	damage = 3.3
+	health = 3.85
+	morale = 1.0
+	morale_damage = 2.5
+	collateral_damage = 2.0
+	war_exhaustion = 2.0
+	time = 200
+	icon = GFX_army_type_armor
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_1" "tech_volatile_motes" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 15
+		}
+		upkeep = {
+			energy = 2.1
+			trade = 0.21
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_1
+		NOT = { has_technology = tech_ship_armor_2 }
+		has_technology = tech_volatile_motes
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_armor_a2 = {
+	damage = 3.0
+	health = 4.2
+	morale = 1.0
+	morale_damage = 2.5
+	collateral_damage = 2.0
+	war_exhaustion = 2.0
+	time = 200
+	icon = GFX_army_type_armor
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_2" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 15
+		}
+		upkeep = {
+			energy = 2
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_2
+		NOT = { has_technology = tech_ship_armor_3 }
+		NOT = { has_technology = tech_volatile_motes }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_armor_a2_m = {
+	damage = 3.3
+	health = 4.2
+	morale = 1.0
+	morale_damage = 2.5
+	collateral_damage = 2.0
+	war_exhaustion = 2.0
+	time = 200
+	icon = GFX_army_type_armor
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_2" "tech_volatile_motes" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 15
+		}
+		upkeep = {
+			energy = 2.1
+			trade = 0.21
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_2
+		NOT = { has_technology = tech_ship_armor_3 }
+		has_technology = tech_volatile_motes
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_armor_a3 = {
+	damage = 3.0
+	health = 4.55
+	morale = 1.0
+	morale_damage = 2.5
+	collateral_damage = 2.0
+	war_exhaustion = 2.0
+	time = 200
+	icon = GFX_army_type_armor
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_3" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 15
+		}
+		upkeep = {
+			energy = 2
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_3
+		NOT = { has_technology = tech_volatile_motes }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_armor_a3_m = {
+	damage = 3.3
+	health = 4.55
+	morale = 1.0
+	morale_damage = 2.5
+	collateral_damage = 2.0
+	war_exhaustion = 2.0
+	time = 200
+	icon = GFX_army_type_armor
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_3" "tech_volatile_motes" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 15
+		}
+		upkeep = {
+			energy = 2.1
+			trade = 0.21
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_3
+		has_technology = tech_volatile_motes
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_fighter = {
+	damage = 2.25
+	health = 1.5
+	morale = 1.0
+	morale_damage = 2.0
+	collateral_damage = 1.0
+	war_exhaustion = 1.0
+	time = 120
+	icon = GFX_army_type_fighter
+	prerequisites = { "tech_strike_craft_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 0.88
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		NOT = { has_technology = tech_ship_armor_1 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_fighter_a1 = {
+	damage = 2.25
+	health = 1.58
+	morale = 1.0
+	morale_damage = 2.0
+	collateral_damage = 1.0
+	war_exhaustion = 1.0
+	time = 120
+	icon = GFX_army_type_fighter
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 0.88
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_1
+		NOT = { has_technology = tech_ship_armor_2 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_fighter_a2 = {
+	damage = 2.25
+	health = 1.65
+	morale = 1.0
+	morale_damage = 2.0
+	collateral_damage = 1.0
+	war_exhaustion = 1.0
+	time = 120
+	icon = GFX_army_type_fighter
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_2" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 0.88
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_2
+		NOT = { has_technology = tech_ship_armor_3 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_fighter_a3 = {
+	damage = 2.25
+	health = 1.72
+	morale = 1.0
+	morale_damage = 2.0
+	collateral_damage = 1.0
+	war_exhaustion = 1.0
+	time = 120
+	icon = GFX_army_type_fighter
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_3" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 0.88
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_3
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_cas = {
+	damage = 3.0
+	health = 1.0
+	morale = 1.0
+	morale_damage = 3.0
+	collateral_damage = 2.0
+	war_exhaustion = 1.0
+	time = 130
+	icon = GFX_army_type_cas
+	prerequisites = { "tech_strike_craft_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		NOT = { has_technology = tech_ship_armor_1 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_cas_a1 = {
+	damage = 3.0
+	health = 1.05
+	morale = 1.0
+	morale_damage = 3.0
+	collateral_damage = 2.0
+	war_exhaustion = 1.0
+	time = 130
+	icon = GFX_army_type_cas
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_1
+		NOT = { has_technology = tech_ship_armor_2 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_cas_a2 = {
+	damage = 3.0
+	health = 1.1
+	morale = 1.0
+	morale_damage = 3.0
+	collateral_damage = 2.0
+	war_exhaustion = 1.0
+	time = 130
+	icon = GFX_army_type_cas
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_2" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_2
+		NOT = { has_technology = tech_ship_armor_3 }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_cas_a3 = {
+	damage = 3.0
+	health = 1.15
+	morale = 1.0
+	morale_damage = 3.0
+	collateral_damage = 2.0
+	war_exhaustion = 1.0
+	time = 130
+	icon = GFX_army_type_cas
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_3" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_3
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_bomber = {
+	damage = 3.5
+	health = 0.5
+	morale = 1.0
+	morale_damage = 5.0
+	collateral_damage = 5.0
+	war_exhaustion = 1.0
+	time = 150
+	icon = GFX_army_type_bomber
+	prerequisites = { "tech_strike_craft_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		NOT = { has_technology = tech_ship_armor_1 }
+		NOT = { has_technology = tech_volatile_motes }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_bomber_m = {
+	damage = 3.85
+	health = 0.5
+	morale = 1.0
+	morale_damage = 5.0
+	collateral_damage = 5.0
+	war_exhaustion = 1.0
+	time = 150
+	icon = GFX_army_type_bomber
+	prerequisites = { "tech_strike_craft_1" "tech_volatile_motes" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.31
+			trade = 0.21
+		}
+	}
+	potential_country = {
+		NOT = { has_technology = tech_ship_armor_1 }
+		has_technology = tech_volatile_motes
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_bomber_a1 = {
+	damage = 3.5
+	health = 0.53
+	morale = 1.0
+	morale_damage = 5.0
+	collateral_damage = 5.0
+	war_exhaustion = 1.0
+	time = 150
+	icon = GFX_army_type_bomber
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_1
+		NOT = { has_technology = tech_ship_armor_2 }
+		NOT = { has_technology = tech_volatile_motes }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_bomber_a1_m = {
+	damage = 3.85
+	health = 0.53
+	morale = 1.0
+	morale_damage = 5.0
+	collateral_damage = 5.0
+	war_exhaustion = 1.0
+	time = 150
+	icon = GFX_army_type_bomber
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_1" "tech_volatile_motes" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.31
+			trade = 0.21
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_1
+		NOT = { has_technology = tech_ship_armor_2 }
+		has_technology = tech_volatile_motes
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_bomber_a2 = {
+	damage = 3.5
+	health = 0.55
+	morale = 1.0
+	morale_damage = 5.0
+	collateral_damage = 5.0
+	war_exhaustion = 1.0
+	time = 150
+	icon = GFX_army_type_bomber
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_2" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_2
+		NOT = { has_technology = tech_ship_armor_3 }
+		NOT = { has_technology = tech_volatile_motes }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_bomber_a2_m = {
+	damage = 3.85
+	health = 0.55
+	morale = 1.0
+	morale_damage = 5.0
+	collateral_damage = 5.0
+	war_exhaustion = 1.0
+	time = 150
+	icon = GFX_army_type_bomber
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_2" "tech_volatile_motes" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.31
+			trade = 0.21
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_2
+		NOT = { has_technology = tech_ship_armor_3 }
+		has_technology = tech_volatile_motes
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_bomber_a3 = {
+	damage = 3.5
+	health = 0.57
+	morale = 1.0
+	morale_damage = 5.0
+	collateral_damage = 5.0
+	war_exhaustion = 1.0
+	time = 150
+	icon = GFX_army_type_bomber
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_3" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_3
+		NOT = { has_technology = tech_volatile_motes }
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_bomber_a3_m = {
+	damage = 3.85
+	health = 0.57
+	morale = 1.0
+	morale_damage = 5.0
+	collateral_damage = 5.0
+	war_exhaustion = 1.0
+	time = 150
+	icon = GFX_army_type_bomber
+	prerequisites = { "tech_strike_craft_1" "tech_ship_armor_3" "tech_volatile_motes" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.31
+			trade = 0.21
+		}
+	}
+	potential_country = {
+		has_technology = tech_ship_armor_3
+		has_technology = tech_volatile_motes
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_clone_infantry = {
+	damage = 0.9
+	health = 1.2
+	morale = 2.5
+	morale_damage = 1.0
+	collateral_damage = 1.0
+	war_exhaustion = 1.0
+	time = 75
+	icon = GFX_army_type_assault
+	prerequisites = { "tech_assault_armies" "tech_cloning" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+		}
+		upkeep = {
+			energy = 0.17
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		planet = { has_building = building_clone_vats }
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_clone_garrison = {
+	damage = 0.48
+	health = 1.5
+	morale = 3.0
+	morale_damage = 1.0
+	collateral_damage = 0.3
+	war_exhaustion = 0.5
+	time = 60
+	icon = GFX_army_type_garrison
+	prerequisites = { "tech_assault_armies" "tech_cloning" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+			food = 50
+		}
+		upkeep = {
+			energy = 0.07
+			food = 0.17
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		planet = { has_building = building_clone_vats }
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_clone_incendiary = {
+	damage = 1.2
+	health = 0.48
+	morale = 0.75
+	morale_damage = 2.5
+	collateral_damage = 2.0
+	war_exhaustion = 1.0
+	time = 90
+	icon = GFX_army_type_incendiary
+	prerequisites = { "tech_assault_armies" "tech_cloning" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+		}
+		upkeep = {
+			energy = 0.7
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		planet = { has_building = building_clone_vats }
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_clone_marine = {
+	damage = 0.9
+	health = 1.2
+	morale = 1.5
+	morale_damage = 3.0
+	collateral_damage = 2.0
+	war_exhaustion = 1.0
+	time = 105
+	icon = GFX_army_type_interstellar_marine
+	prerequisites = { "tech_assault_armies" "tech_cloning" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+		}
+		upkeep = {
+			energy = 0.35
+			trade = 0.1
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		planet = { has_building = building_clone_vats }
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_clone_odst = {
+	damage = 1.5
+	health = 1.8
+	morale = 2.5
+	morale_damage = 4.0
+	collateral_damage = 1.5
+	war_exhaustion = 1.5
+	time = 120
+	icon = GFX_army_type_odt
+	prerequisites = { "tech_strike_craft_1" "tech_cloning" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 5
+		}
+		upkeep = {
+			energy = 0.88
+			trade = 0.2
+		}
+	}
+	potential_country = {
+		NOR = {
+			has_civic = civic_feudal_realm
+			has_origin = origin_toxic_knights
+			has_civic = civic_corporate_dominion
+			has_civic = civic_merchant_guilds
+			has_authority = auth_corporate
+			has_authority = auth_machine_intelligence
+			country_uses_bio_ships = yes
+		}
+	}
+	potential = {
+		planet = { has_building = building_clone_vats }
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_combat_frame = {
+	damage = 1.5
+	health = 2.0
+	has_morale = no
+	morale_damage = 1.0
+	collateral_damage = 1.0
+	war_exhaustion = 1.0
+	time = 100
+	has_species = yes
+	icon = GFX_army_type_machine_assault
+	prerequisites = { "tech_assault_armies" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 100
+		}
+		upkeep = {
+			energy = 0.5
+		}
+	}
+	potential_country = { has_authority = auth_machine_intelligence }
+	potential = {
+		from = {
+			has_trait = "trait_machine_unit"
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_siege_frame = {
+	damage = 3.0
+	health = 3.5
+	has_morale = no
+	morale_damage = 2.5
+	collateral_damage = 2.0
+	war_exhaustion = 2.0
+	time = 200
+	has_species = yes
+	icon = GFX_army_type_siege_frame
+	prerequisites = { "tech_assault_armies" "tech_ship_armor_3" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 200
+			alloys = 15
+		}
+		upkeep = {
+			energy = 2.5
+		}
+	}
+	potential_country = { has_authority = auth_machine_intelligence }
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			has_trait = "trait_machine_unit"
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_interceptor_swarm = {
+	damage = 2.5
+	health = 1.5
+	has_morale = no
+	morale_damage = 2.5
+	collateral_damage = 1.5
+	war_exhaustion = 1.0
+	time = 120
+	has_species = yes
+	icon = GFX_army_type_swarm
+	prerequisites = { "tech_strike_craft_1" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 150
+			alloys = 5
+		}
+		upkeep = {
+			energy = 1.25
+		}
+	}
+	potential_country = { has_authority = auth_machine_intelligence }
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			has_trait = "trait_machine_unit"
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+
+ugf_prime_warform = {
+	damage = 3.5
+	health = 5.5
+	has_morale = no
+	morale_damage = 8.0
+	collateral_damage = 3.0
+	war_exhaustion = 4.0
+	time = 800
+	has_species = yes
+	icon = GFX_army_type_warform
+	prerequisites = { "tech_synthetic_workers" }
+	resources = {
+		category = armies
+		cost = {
+			minerals = 350
+			alloys = 50
+		}
+		upkeep = {
+			energy = 2
+		}
+	}
+	potential_country = { has_authority = auth_machine_intelligence }
+	potential = {
+		OR = {
+			planet = { has_building = building_stronghold }
+			planet = { has_building = building_fortress }
+		}
+		from = {
+			has_trait = "trait_machine_unit"
+		}
+	}
+	ai_weight = {
+		base = 100
+	}
+}
+

@@ -1,0 +1,69 @@
+# UGF spawned defensive units - not recruitable
+# Planetary Guard: replaces vanilla defense_army; spawns from soldier jobs like vanilla
+defense_army = {
+	defensive = yes
+	is_pop_spawned = yes
+	damage = 2.25
+	health = 2.0
+	morale = 2.0
+	morale_damage = 2.25
+	collateral_damage = 0.3
+	war_exhaustion = 0.75
+	icon = GFX_army_type_planetary_guard
+	resources = {
+		category = armies
+		upkeep = {
+			energy = 0.5
+			food = 0.5
+		}
+		produces = {
+			trigger = {
+				exists = owner
+				owner = { has_active_tradition = tr_unyielding_resistance_is_frugal }
+			}
+			unity = 0.5
+		}
+	}
+	potential = {
+		from = {
+			NOR = {
+				has_trait = "trait_mechanical"
+				has_trait = "trait_machine_unit"
+				is_sapient = no
+			}
+		}
+		owner = {
+			is_primitive = no
+			OR = {
+				is_machine_empire = no
+				has_valid_civic = civic_machine_assimilator
+			}
+			is_wilderness_empire = no
+		}
+	}
+}
+
+# Capital Guard: event-spawned from capital buildings; never recruitable
+ugf_capital_guard = {
+	defensive = yes
+	damage = 2.5
+	health = 2.5
+	morale = 2.75
+	morale_damage = 1.5
+	collateral_damage = 0.7
+	war_exhaustion = 1.4
+	time = 0
+	icon = GFX_army_type_capital_guard
+	resources = {
+		category = armies
+		upkeep = {
+			energy = 0.25
+		}
+	}
+	show_tech_unlock_if = {
+		always = no
+	}
+	potential = {
+		always = no
+	}
+}
