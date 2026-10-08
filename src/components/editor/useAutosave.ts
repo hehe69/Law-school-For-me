@@ -64,7 +64,11 @@ export function useAutosave(outlineId: string, initial: NodeMap, current: NodeMa
   // Schedule a save whenever the tree changes.
   useEffect(() => {
     latest.current = current;
-    if (current === persisted.current) return;
+    if (current === persisted.current) {
+      // Back to exactly what the server has (an undo): nothing to send.
+      setState((s) => (s === "saving" ? s : "saved"));
+      return;
+    }
     const diff = diffNodes(persisted.current, current);
     if (diff.upserts.length === 0 && diff.deletes.length === 0) {
       setState("saved");

@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getDb } from "@/lib/db";
 import { getCourseBySlug, listOutlines } from "@/lib/courses";
+import { loadImages, loadNodes } from "@/lib/nodes";
+import { estimatePages } from "@/lib/progress";
 import { createOutlineAction, deleteCourseAction, deleteOutlineAction, renameOutlineAction, updateCourseAction } from "@/app/actions";
 import { ConfirmSubmit } from "@/components/ConfirmSubmit";
 
@@ -14,6 +16,9 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
   if (!course) notFound();
   const outlines = listOutlines(db, course.id);
   const main = outlines.find((o) => o.isDefault && o.kind === "full") ?? outlines.find((o) => o.kind === "full") ?? null;
+  const pageEstimates = course.pageLimit
+    ? outlines.filter((o) => o.kind !== "scratch").map((o) => ({ id: o.id, name: o.name, pages: estimatePages(loadNodes(db, o.id), loadImages(db, o.id)) }))
+    : [];
   const nodeCounts = Object.fromEntries(
     outlines.map((o) => [o.id, (db.prepare("SELECT COUNT(*) AS n FROM nodes WHERE outline_id = ?").get(o.id) as { n: number }).n]),
   ) as Record<string, number>;
@@ -59,9 +64,33 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
             <Link href={`/courses/${course.slug}/outlines/${main.id}/attack`} className="btn">
               Attack outline
             </Link>
+            <Link href={`/courses/${course.slug}/outlines/${main.id}/drill`} className="btn">
+              Drills
+            </Link>
           </>
         )}
+        <Link href={`/courses/${course.slug}/progress`} className="btn">
+          Progress
+        </Link>
+        <Link href={`/courses/${course.slug}/gaps`} className="btn">
+          Gaps
+        </Link>
+        <Link href={`/review?course=${course.slug}`} className="btn">
+          Review
+        </Link>
       </nav>
+      {course.pageLimit && pageEstimates.length > 0 && (
+        <p className="mt-2 text-sm text-gray-600">
+          Page limit {course.pageLimit}:{" "}
+          {pageEstimates.map((p, i) => (
+            <span key={p.id}>
+              {i > 0 ? " · " : ""}
+              {p.name} ~{p.pages} page{p.pages === 1 ? "" : "s"}
+              <span className={p.pages > course.pageLimit! ? " text-red-700" : " text-green-700"}>{p.pages > course.pageLimit! ? " (over)" : " (ok)"}</span>
+            </span>
+          ))}
+        </p>
+      )}
 
       <section className="mt-6">
         <h2 className="text-base font-medium">Outlines</h2>

@@ -7,6 +7,7 @@ import { nodeSummary, STATUS_DOT_CLASS, STATUS_LABELS, typeDef } from "@/lib/fie
 export type DropWhere = "before" | "after" | "inside";
 
 export type RowBadges = { links: number; sources: number; images: number };
+export type RowMastery = { mastery: "cold" | "shaky"; right: number; wrong: number } | null;
 
 export type RowHandlers = {
   onTitleChange: (id: string, title: string) => void;
@@ -33,19 +34,24 @@ type Props = {
   dropWhere: DropWhere | null;
   dimmed: boolean;
   badges: RowBadges;
+  /** Drill results: green "know it cold", amber "shaky" */
+  mastery?: RowMastery;
   handlers: RowHandlers;
 };
 
 const INDENT = 22;
 
-function RowImpl({ node, depth, label, hasChildren, selected, active, skeleton, dropWhere, dimmed, badges, handlers }: Props) {
+function RowImpl({ node, depth, label, hasChildren, selected, active, skeleton, dropWhere, dimmed, badges, mastery, handlers }: Props) {
   const def = typeDef(node.type);
   const summary = skeleton ? "" : nodeSummary(node);
   const [fileOver, setFileOver] = useState(false);
+  const masteryClass = mastery ? (mastery.mastery === "cold" ? "border-l-[3px] border-green-500" : "border-l-[3px] border-amber-500") : "";
   return (
     <div
       data-node-id={node.id}
-      className={`group relative flex items-start gap-1 rounded px-1 ${selected ? "bg-blue-50" : "hover:bg-gray-50"} ${active ? "ring-1 ring-blue-300" : ""} ${dimmed ? "opacity-40" : ""} ${fileOver ? "bg-amber-50 ring-1 ring-amber-400" : ""}`}
+      data-mastery={mastery?.mastery}
+      title={mastery ? `${mastery.mastery === "cold" ? "Know it cold" : "Shaky"}: ${mastery.right} right, ${mastery.wrong} wrong in drills` : undefined}
+      className={`group relative flex items-start gap-1 rounded px-1 ${selected ? "bg-blue-50" : "hover:bg-gray-50"} ${active ? "ring-1 ring-blue-300" : ""} ${dimmed ? "opacity-40" : ""} ${fileOver ? "bg-amber-50 ring-1 ring-amber-400" : ""} ${masteryClass}`}
       style={{ paddingLeft: depth * INDENT + 4 }}
       onMouseDown={(e) => {
         if ((e.target as HTMLElement).tagName !== "INPUT") handlers.onFocusRow(node.id, e);

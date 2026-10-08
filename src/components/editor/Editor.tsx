@@ -32,7 +32,8 @@ import { isMod, shortcutLabel } from "@/lib/keys";
 import { NODE_TYPE_DEFS, nodeText, STATUS_LABELS } from "@/lib/fields";
 import { useHistory } from "./useHistory";
 import { useAutosave } from "./useAutosave";
-import { TreeRow, type DropWhere, type RowBadges, type RowHandlers } from "./TreeRow";
+import { TreeRow, type DropWhere, type RowBadges, type RowHandlers, type RowMastery } from "./TreeRow";
+import { estimatePages } from "@/lib/progress";
 import { SidePanel } from "./SidePanel";
 import { CommandPalette, type PaletteItem } from "./CommandPalette";
 import { NodePicker } from "./NodePicker";
@@ -54,6 +55,8 @@ type Props = {
   syllabusUrl: string | null;
   /** Open the syllabus pane on load (?pane=syllabus) */
   initialPane: "syllabus" | null;
+  /** Drill results per node, for the tree colouring */
+  mastery: Record<string, NonNullable<RowMastery>>;
 };
 
 type Pane = { kind: "none" } | { kind: "syllabus" } | { kind: "compare"; name: string; tree: ImportedNode[]; count: number };
@@ -89,7 +92,7 @@ function toMap(nodes: OutlineNode[]): NodeMap {
   return map;
 }
 
-export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPane }: Props) {
+export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPane, mastery }: Props) {
   const router = useRouter();
   const outlineId = bundle.outline.id;
   const initialMap = useMemo(() => toMap(bundle.nodes), [bundle.nodes]);
@@ -145,6 +148,9 @@ export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPa
   }, [nodes, search, allRows]);
 
   const depth = useMemo(() => maxDepth(nodes), [nodes]);
+
+  // Page-limit mode: the estimate follows every keystroke.
+  const pages = useMemo(() => (bundle.course.pageLimit ? estimatePages(Object.values(nodes), images) : null), [bundle.course.pageLimit, nodes, images]);
 
   // Per-row counts shown as small badges.
   const badges = useMemo(() => {
@@ -775,6 +781,10 @@ export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPa
     if (readTarget) cmd("read", "Reading mode", () => router.push(`${base}/read/${readTarget}`));
     cmd("flowchart", act ? "Flowchart of this branch" : "Flowcharts", () => router.push(act ? `${base}/flowchart/${act}` : `${base}/flowchart`));
     cmd("glossary", "Glossary", () => router.push(`/courses/${bundle.course.slug}/glossary`));
+    cmd("drill", "Drills (recite, hypos)", () => router.push(`${base}/drill`));
+    cmd("progress", "Progress", () => router.push(`/courses/${bundle.course.slug}/progress`));
+    cmd("gaps", "Gaps", () => router.push(`/courses/${bundle.course.slug}/gaps`));
+    cmd("review", "Daily flashcard review", () => router.push(`/review?course=${bundle.course.slug}`));
     if (isAttack) cmd("regenerate", "Regenerate this attack outline from its source", () => void regenerate());
     else if (bundle.outline.kind === "full") cmd("attack", "Generate an attack outline…", () => router.push(`${base}/attack`));
     cmd("close-pane", "Close the left pane", () => setPane({ kind: "none" }));
@@ -1092,6 +1102,15 @@ export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPa
             <Link href={`/courses/${bundle.course.slug}/glossary`} className="px-3 py-1 hover:bg-gray-50">
               Glossary
             </Link>
+            <Link href={`${base}/drill`} className="px-3 py-1 hover:bg-gray-50">
+              Drills
+            </Link>
+            <Link href={`/courses/${bundle.course.slug}/progress`} className="px-3 py-1 hover:bg-gray-50">
+              Progress
+            </Link>
+            <Link href={`/courses/${bundle.course.slug}/gaps`} className="px-3 py-1 hover:bg-gray-50">
+              Gaps
+            </Link>
             {isAttack ? (
               <button type="button" className="px-3 py-1 text-left hover:bg-gray-50" onClick={() => void regenerate()}>
                 Regenerate from source
@@ -1115,6 +1134,14 @@ export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPa
           }}
         />
         <span className="ml-auto text-xs text-gray-500">{allRows.length} nodes</span>
+        {pages !== null && bundle.course.pageLimit && (
+          <span
+            className={`rounded px-1.5 text-xs ${pages > bundle.course.pageLimit ? "bg-red-100 text-red-800" : pages > bundle.course.pageLimit * 0.9 ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"}`}
+            title="Estimated printed pages against the course's page limit (single-spaced, 11-point). Updates as you type."
+          >
+            ~{pages} / {bundle.course.pageLimit} pages
+          </span>
+        )}
         {notice && <span className="text-xs text-amber-700">{notice}</span>}
         <span className={`text-xs ${saveColor}`} title={autosave.error ?? (autosave.savedAt ? `Last saved ${new Date(autosave.savedAt).toLocaleTimeString()}` : "")}>
           {saveLabel}
@@ -1193,6 +1220,7 @@ export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPa
                 dropWhere={dropTarget?.id === r.node.id ? dropTarget.where : null}
                 dimmed={drag?.includes(r.node.id) ?? false}
                 badges={badges[r.node.id] ?? NO_BADGES}
+                mastery={mastery[r.node.id] ?? null}
                 handlers={handlers}
               />
             ))

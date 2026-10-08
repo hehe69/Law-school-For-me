@@ -108,6 +108,13 @@ export function SidePanel({ node, nodes, nodesById, links, sources, images, acti
         </div>
       </div>
 
+      {(node.type === "rule" || node.type === "element") && (
+        <label className="mt-3 flex items-center gap-2 text-xs text-gray-700">
+          <input type="checkbox" checked={node.flashcard} onChange={(e) => onPatch(node.id, { flashcard: e.target.checked })} />
+          Flashcard (SM-2 daily review)
+        </label>
+      )}
+
       {skeleton ? (
         <p className="mt-4 rounded border border-dashed border-gray-300 p-3 text-xs text-gray-500">Skeleton mode hides every field except the title. Turn it off in the toolbar to fill the fields.</p>
       ) : (

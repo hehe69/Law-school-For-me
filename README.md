@@ -8,15 +8,15 @@ summarises or fills sections for you.
 No AI features, no accounts, no hosting. Everything lives in a SQLite
 database and an uploads folder on your Mac.
 
-> Build status: **phases 1 to 4 of 6** are done (data model, courses and
+> Build status: **phases 1 to 5 of 6** are done (data model, courses and
 > outlines, the tree editor, node fields in the side panel, images, links
 > and backlinks, sources, tags, the scratch outline with "move to", the
 > capture box with the inbox, the syllabus PDF pane, study-app import with
 > linked nodes, .docx / .md import, the comparison pane, attack outlines,
-> the issue checklist, exam mode, flowcharts, the glossary and reading
-> mode). Phases 5 and 6 add drills and progress, and printing, exports,
-> snapshots, backups and the packaged Mac app. This README grows with each
-> phase.
+> the issue checklist, exam mode, flowcharts, the glossary, reading mode,
+> drills, progress, gaps, page-limit mode and flashcards). Phase 6 adds
+> printing, exports, snapshot diffs and restore, backups, the network
+> switch and the packaged Mac app. This README grows with each phase.
 
 ## Run it
 
@@ -192,6 +192,41 @@ compact line under the node.
 - **Reading mode**: one branch at a time as a clean document in large type,
   with previous / next branch, the parent, and the outline's sections in a
   sidebar.
+
+## Drills, progress, gaps, flashcards
+
+- **Drills** (Views → Drills, or the course page): pick a branch or the
+  whole outline. **Recite**: each rule's statement and elements are hidden;
+  say them out loud, reveal the statement and then one element at a time
+  (or all), mark right or wrong; a timer runs per rule. **Hypos**: facts
+  and question, write your answer, reveal the model answer and what it
+  turns on, mark right or wrong. Every result is stored. The tree shows a
+  coloured left edge from the last three results of a node: green "know it
+  cold" (at least two tries, all right), amber "shaky" (any wrong), nothing
+  for untested; hover the row for the counts.
+- **Progress** (per course, per outline): nodes, percent final, words and
+  the estimated printed pages; counts and percent by status overall and per
+  top-level section; a word-count timeline over snapshots (a snapshot is
+  taken automatically once a day when you open an outline that changed,
+  and manual snapshots arrive in phase 6); stale sections with no edit in
+  14 or more days.
+- **Gaps**: syllabus topics with no node tagged with them, rules with no
+  elements, headings with nothing under them, hypos with no answer, and
+  rules, cases, statutes, elements, exceptions, policies and professor
+  notes with no source. Attack outlines are not counted.
+- **Page-limit mode**: when a course has a printed page limit, the editor
+  toolbar shows "~N / limit pages" for the outline being edited, updated as
+  you type (green, amber above 90 percent, red over the limit), and the
+  course page shows the estimate for every full and attack outline. The
+  estimate assumes single-spaced 11-point text: about 380 words per page,
+  plus a line per node and a share of a page per image.
+- **Flashcards**: off by default. On a rule or element node, tick
+  "Flashcard" in the panel. The front is the title; the back is the rule
+  statement with its elements (or the element's text, definition and
+  "satisfied when"). **Review** in the header shows how many cards are due
+  and opens the daily review (all courses, or one), with the same SM-2
+  scheduling as the study app: Again, Hard, Good, Easy. Attack outlines
+  never make cards.
 
 ## Data model
 
