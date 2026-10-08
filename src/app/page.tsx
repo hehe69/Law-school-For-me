@@ -1,128 +1,105 @@
 import Link from "next/link";
-import ContentErrors from "@/components/ContentErrors";
-import { loadContent } from "@/lib/content/loader";
-import { lastDiagnosticByCourse, unitStatsMap } from "@/lib/attempts";
-import { dueByCourse } from "@/lib/reviews";
-import { formatDate } from "@/lib/format";
-import { lastBackup } from "@/lib/backup";
-import { backupAction, setNetworkAccessAction } from "@/app/content-actions";
-import { readSettings } from "@/lib/settings";
-import UnitTable from "@/components/UnitTable";
-import { examPlan } from "@/lib/exam";
+import { getDb } from "@/lib/db";
+import { listCourses, listOutlines } from "@/lib/courses";
+import { seedIfEmpty } from "@/lib/seed";
+import { createCourseAction } from "./actions";
 
-export const dynamic = "force-dynamic";
+function daysUntil(date: string | null): string | null {
+  if (!date) return null;
+  const [y, m, d] = date.split("-").map(Number);
+  const target = new Date(y, m - 1, d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((target.getTime() - today.getTime()) / 86400000);
+  if (days < 0) return `exam was ${-days} days ago`;
+  if (days === 0) return "exam today";
+  return `${days} days to the exam`;
+}
 
-export default async function HomePage({ searchParams }: PageProps<"/">) {
-  const sp = await searchParams;
-  const tree = loadContent();
-  const stats = unitStatsMap();
-  const due = dueByCourse(tree);
-  const totalDue = [...due.values()].reduce((n, d) => n + d.due, 0);
-  const last = lastBackup();
-  const settings = readSettings();
-  const diagnostics = lastDiagnosticByCourse();
-
+export default function HomePage() {
+  const db = getDb();
+  seedIfEmpty(db);
+  const courses = listCourses(db);
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <h1 className="text-2xl font-semibold">Courses</h1>
-        <Link href="/courses/new" className="rounded border border-gray-300 px-3 py-1 text-sm">New course</Link>
-        <form action={backupAction} className="ml-auto flex items-center gap-2 text-sm">
-          <span className="text-gray-600">
-            {last ? `Last backup ${formatDate(last.mtime.toISOString())}` : "No backup yet"}
-          </span>
-          <button type="submit" className="rounded border border-gray-300 px-3 py-1">Back up now</button>
+    <div className="mx-auto w-full max-w-4xl px-6 py-8">
+      <h1 className="text-xl font-semibold">Courses</h1>
+      <p className="mt-1 text-sm text-gray-600">Each course has a full outline, a scratch list, and any attack or midterm outlines you add.</p>
+
+      <ul className="mt-6 grid gap-3 sm:grid-cols-2">
+        {courses.map((course) => {
+          const outlines = listOutlines(db, course.id);
+          const full = outlines.find((o) => o.isDefault && o.kind === "full") ?? outlines.find((o) => o.kind === "full");
+          const countdown = daysUntil(course.examDate);
+          return (
+            <li key={course.id} className="card">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <Link href={`/courses/${course.slug}`} className="text-base font-medium text-gray-900 hover:underline">
+                    {course.title}
+                  </Link>
+                  <div className="mt-1 text-xs text-gray-500">
+                    {outlines.length} outline{outlines.length === 1 ? "" : "s"}
+                    {countdown ? ` · ${countdown}` : ""}
+                    {course.pageLimit ? ` · ${course.pageLimit}-page limit` : ""}
+                  </div>
+                </div>
+                {full && (
+                  <Link href={`/courses/${course.slug}/outlines/${full.id}`} className="btn-primary shrink-0">
+                    Open outline
+                  </Link>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <section className="card mt-8">
+        <h2 className="text-base font-medium">New course</h2>
+        <form action={createCourseAction} className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div className="sm:col-span-2">
+            <label className="label" htmlFor="title">
+              Title
+            </label>
+            <input id="title" name="title" className="input" required placeholder="Civil Procedure" />
+          </div>
+          <div>
+            <label className="label" htmlFor="examDate">
+              Exam date
+            </label>
+            <input id="examDate" name="examDate" type="date" className="input" />
+          </div>
+          <div>
+            <label className="label" htmlFor="pageLimit">
+              Page limit for the printed outline (optional)
+            </label>
+            <input id="pageLimit" name="pageLimit" type="number" min={1} className="input" />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label" htmlFor="examFormat">
+              Exam format notes
+            </label>
+            <textarea id="examFormat" name="examFormat" className="input" rows={2} placeholder="Three hours, open book, two essays…" />
+          </div>
+          <div>
+            <label className="label" htmlFor="studyCourseSlug">
+              Study-app course slug (optional)
+            </label>
+            <input id="studyCourseSlug" name="studyCourseSlug" className="input" placeholder="property" />
+          </div>
+          <div>
+            <label className="label" htmlFor="syllabusTopics">
+              Syllabus topics (one per line)
+            </label>
+            <textarea id="syllabusTopics" name="syllabusTopics" className="input" rows={2} />
+          </div>
+          <div className="sm:col-span-2">
+            <button type="submit" className="btn-primary">
+              Create course
+            </button>
+          </div>
         </form>
-      </div>
-
-      <form action={setNetworkAccessAction} className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-        <label className="flex items-center gap-2">
-          <input type="checkbox" name="networkAccess" defaultChecked={settings.networkAccess} />
-          Allow other devices on my wifi to open this app
-        </label>
-        <button type="submit" className="rounded border border-gray-300 px-3 py-1">Save</button>
-        <span className="text-gray-500">
-          Currently {settings.networkAccess ? "on: listening on all interfaces" : "off: this computer only"}. Takes effect the next time you start the app.
-        </span>
-        {sp.settings === "saved" && <span className="text-green-700">Saved. Restart the app to apply.</span>}
-      </form>
-
-      {sp.backup === "ok" && typeof sp.file === "string" && (
-        <p className="mb-4 rounded border border-green-300 bg-green-50 p-3 text-sm text-green-900">
-          Backup written to <code className="font-mono">{sp.file}</code>
-        </p>
-      )}
-      {sp.backup === "error" && (
-        <p className="mb-4 rounded border border-red-300 bg-red-50 p-3 text-sm text-red-900">
-          Backup failed: {typeof sp.message === "string" ? sp.message : "unknown error"}
-        </p>
-      )}
-
-      <ContentErrors errors={tree.errors} />
-
-      {tree.courses.length > 0 && (
-        <div className="mb-6 rounded border border-gray-200 bg-gray-50 p-4 text-sm">
-          <p className="mb-1 font-semibold">Flashcards due today: {totalDue}</p>
-          <ul className="flex flex-wrap gap-x-6 gap-y-1">
-            {tree.courses.map((course) => {
-              const d = due.get(course.slug) ?? { due: 0, total: 0, newCards: 0 };
-              return (
-                <li key={course.slug}>
-                  {course.title}: <strong>{d.due}</strong> due of {d.total}
-                  {d.newCards > 0 && <span className="text-gray-500"> ({d.newCards} new)</span>}
-                  {d.due > 0 && (
-                    <>
-                      {" "}
-                      <Link href={`/review?course=${course.slug}`} className="text-blue-700 underline">review</Link>
-                    </>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
-      {tree.courses.length === 0 && (
-        <p className="text-gray-600">
-          No courses yet. <Link href="/courses/new" className="underline">Create one</Link>, or add a folder under{" "}
-          <code className="font-mono">content/</code> with a <code className="font-mono">course.json</code>. See the README.
-        </p>
-      )}
-
-      {tree.courses.map((course) => {
-        const plan = examPlan(course, stats);
-        const diag = diagnostics.get(course.slug);
-        return (
-        <section key={course.slug} className="mb-8">
-          <h2 className="mb-2 flex items-baseline gap-3 text-xl font-semibold">
-            <Link href={`/courses/${course.slug}`} className="hover:underline">{course.title}</Link>
-            <Link href={`/courses/${course.slug}/units/new`} className="text-sm font-normal text-blue-700 underline">New unit</Link>
-            <Link href={`/courses/${course.slug}/weak-tags`} className="text-sm font-normal text-blue-700 underline">Weak tags</Link>
-            <Link href={`/courses/${course.slug}/outline`} className="text-sm font-normal text-blue-700 underline">Outline</Link>
-            <Link href={`/courses/${course.slug}/map`} className="text-sm font-normal text-blue-700 underline">Map</Link>
-          </h2>
-          <p className="mb-2 text-sm text-gray-700">
-            {diag ? (
-              <>Last diagnostic {formatDate(diag.finished_at)} · {Math.round(diag.score_percent)}% · <Link href={`/attempts/${diag.id}`} className="text-blue-700 underline">report</Link></>
-            ) : (
-              <>No diagnostic yet · <Link href={`/courses/${course.slug}/diagnostic`} className="text-blue-700 underline">take one</Link></>
-            )}
-          </p>
-          {plan && (
-            <p className={`mb-2 text-sm ${plan.daysRemaining >= 0 && plan.daysRemaining <= 7 ? "text-red-700" : "text-gray-700"}`}>
-              Exam {plan.examDate}:{" "}
-              {plan.daysRemaining > 0 ? `${plan.daysRemaining} day${plan.daysRemaining === 1 ? "" : "s"} remaining` : plan.daysRemaining === 0 ? "today" : `${-plan.daysRemaining} day${plan.daysRemaining === -1 ? "" : "s"} ago`}
-              {plan.unitsPerWeek !== null && (
-                <> · <strong>{plan.unitsPerWeek}</strong> unit{plan.unitsPerWeek === 1 ? "" : "s"} per week to finish ({plan.unitsRemaining} with no attempts)</>
-              )}
-              {plan.daysRemaining > 0 && plan.unitsRemaining === 0 && " · every unit has been tested"}
-            </p>
-          )}
-          <UnitTable course={course} stats={stats} />
-        </section>
-        );
-      })}
+      </section>
     </div>
   );
 }

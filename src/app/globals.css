@@ -1,6 +1,74 @@
 @import "tailwindcss";
 
+:root {
+  --font-ui: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+html,
 body {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-ui);
+  color: #1f2328;
   background: #ffffff;
-  color: #171717;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center gap-1 rounded border border-gray-300 bg-white px-2.5 py-1 text-sm text-gray-800 hover:bg-gray-50 disabled:opacity-40 disabled:hover:bg-white;
+  }
+  .btn-primary {
+    @apply inline-flex items-center gap-1 rounded border border-gray-900 bg-gray-900 px-2.5 py-1 text-sm text-white hover:bg-gray-700 disabled:opacity-40;
+  }
+  .btn-danger {
+    @apply inline-flex items-center gap-1 rounded border border-red-300 bg-white px-2.5 py-1 text-sm text-red-700 hover:bg-red-50;
+  }
+  .input {
+    @apply w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-gray-500 focus:outline-none;
+  }
+  .label {
+    @apply mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500;
+  }
+  .card {
+    @apply rounded border border-gray-200 bg-white p-4;
+  }
+}
+
+/* Markdown rendering inside the app (reading mode, panel previews). */
+.prose-outline :is(p, ul, ol, blockquote, pre, table) {
+  margin: 0.4em 0;
+}
+.prose-outline ul {
+  list-style: disc;
+  padding-left: 1.25em;
+}
+.prose-outline ol {
+  list-style: decimal;
+  padding-left: 1.25em;
+}
+.prose-outline blockquote {
+  border-left: 3px solid #d1d5db;
+  padding-left: 0.75em;
+  color: #4b5563;
+}
+.prose-outline code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+  background: #f3f4f6;
+  padding: 0 0.25em;
+  border-radius: 3px;
+}
+.prose-outline img {
+  max-width: 100%;
+  height: auto;
+}
+.prose-outline a {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+.prose-outline strong {
+  font-weight: 600;
 }

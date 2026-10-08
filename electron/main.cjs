@@ -1,4 +1,4 @@
-// Electron entry point: resolve data folders, start the Next.js server, open one window, build the menu.
+// Electron entry point: resolve the data folder, start the Next.js server, open one window, build the menu.
 
 const { app, BrowserWindow, dialog, Menu, shell } = require("electron");
 const fs = require("node:fs");
@@ -6,45 +6,35 @@ const path = require("node:path");
 const { resolvePaths, writeSettings, readSettings } = require("./paths.cjs");
 const { startServer } = require("./server.cjs");
 
-// ~/Library/Application Support/Law Study/settings.json on macOS (~/.config/Law Study on Linux), whatever the
-// package name says, so the path in the README is always right.
-app.setName("Law Study");
-const SETTINGS_FILE = path.join(app.getPath("appData"), "Law Study", "settings.json");
+// ~/Library/Application Support/Law Outlines/settings.json on macOS (~/.config/Law Outlines on Linux), whatever
+// the package name says, so the path in the README is always right.
+app.setName("Law Outlines");
+const SETTINGS_FILE = path.join(app.getPath("appData"), "Law Outlines", "settings.json");
 const STANDALONE_DIR = path.join(__dirname, "..", ".next", "standalone");
-const BUILD_ORIGIN_FILE = path.join(__dirname, "..", "build-origin.json");
 
 let server = null;
 let mainWindow = null;
 
 function fail(title, message) {
   // Also on stderr, so the reason shows in Console.app or a terminal launch, not only in the dialog.
-  console.error(`[law-study] ${title}: ${message}`);
+  console.error(`[law-outlines] ${title}: ${message}`);
   dialog.showErrorBox(title, message);
   app.exit(1);
 }
 
-function readBuildOrigin() {
-  try {
-    return JSON.parse(fs.readFileSync(BUILD_ORIGIN_FILE, "utf8"));
-  } catch {
-    return null;
-  }
-}
-
-/** First launch: confirm the folders once, offer to choose a different content folder, create what is missing. */
+/** First launch: confirm the data folder once, offer to choose a different one, create it if missing. */
 async function confirmFolders(paths) {
   if (paths.confirmed) return paths;
   const detail =
-    `Content (notes, questions, maps):\n${paths.contentDir}\n\n` +
-    `Database (attempts, flashcards, inbox):\n${paths.dataDir}\n\n` +
-    (paths.fromRepo ? "These are the folders your development copy already uses, so both versions share one set of notes.\n\n" : "") +
-    `You can change these later in:\n${SETTINGS_FILE}`;
+    `Database and uploads:\n${paths.dataDir}\n\n` +
+    `Backups go to ~/Documents/law-outlines-backups and exports to ~/Documents/law-outlines-export.\n\n` +
+    `You can change the data folder later in:\n${SETTINGS_FILE}`;
   const { response } = await dialog.showMessageBox({
     type: "question",
-    title: "Where should Law Study keep your notes?",
-    message: "Law Study will use these folders.",
+    title: "Where should Law Outlines keep your outlines?",
+    message: "Law Outlines will use this folder.",
     detail,
-    buttons: ["Use these folders", "Choose a content folder…", "Quit"],
+    buttons: ["Use this folder", "Choose a folder…", "Quit"],
     defaultId: 0,
     cancelId: 2,
   });
@@ -52,34 +42,27 @@ async function confirmFolders(paths) {
     app.exit(0);
     return null;
   }
-  let { contentDir, dataDir } = paths;
+  let { dataDir } = paths;
   if (response === 1) {
-    const picked = await dialog.showOpenDialog({ title: "Choose the content folder", properties: ["openDirectory", "createDirectory"] });
+    const picked = await dialog.showOpenDialog({ title: "Choose the data folder", properties: ["openDirectory", "createDirectory"] });
     if (picked.canceled || picked.filePaths.length === 0) {
       app.exit(0);
       return null;
     }
-    contentDir = picked.filePaths[0];
-    dataDir = path.join(path.dirname(contentDir), "data");
+    dataDir = picked.filePaths[0];
   }
-  writeSettings(SETTINGS_FILE, { contentDir, dataDir, confirmed: true });
-  return { contentDir, dataDir, confirmed: true, fromRepo: false };
+  writeSettings(SETTINGS_FILE, { dataDir, confirmed: true });
+  return { dataDir, confirmed: true };
 }
 
-function ensureFolders(paths, firstRun) {
-  if (!fs.existsSync(paths.contentDir)) {
-    if (!firstRun) {
-      throw new Error(`The content folder does not exist:\n${paths.contentDir}\n\nCreate it, or point the app somewhere else by editing contentDir in:\n${SETTINGS_FILE}`);
-    }
-    fs.mkdirSync(paths.contentDir, { recursive: true });
-  }
+function ensureFolders(paths) {
   fs.mkdirSync(paths.dataDir, { recursive: true });
+  fs.mkdirSync(path.join(paths.dataDir, "uploads"), { recursive: true });
   // A clear message when the folder cannot be written (for example a read-only disk).
   try {
-    fs.accessSync(paths.contentDir, fs.constants.W_OK);
     fs.accessSync(paths.dataDir, fs.constants.W_OK);
   } catch {
-    throw new Error(`Law Study cannot write to its folders:\n${paths.contentDir}\n${paths.dataDir}\n\nCheck the permissions, or change the folders in:\n${SETTINGS_FILE}`);
+    throw new Error(`Law Outlines cannot write to its data folder:\n${paths.dataDir}\n\nCheck the permissions, or change the folder in:\n${SETTINGS_FILE}`);
   }
 }
 
@@ -99,13 +82,9 @@ function buildMenu(paths) {
         { role: "about" },
         { type: "separator" },
         {
-          label: "Open content folder",
-          accelerator: "CmdOrCtrl+Shift+O",
-          click: () => shell.showItemInFolder(paths.contentDir),
-        },
-        {
           label: "Open data folder",
-          click: () => shell.showItemInFolder(path.join(paths.dataDir, "study.db")),
+          accelerator: "CmdOrCtrl+Shift+O",
+          click: () => shell.showItemInFolder(path.join(paths.dataDir, "outlines.db")),
         },
         {
           label: "Open settings file",
@@ -122,11 +101,12 @@ function buildMenu(paths) {
     {
       label: "File",
       submenu: [
-        { label: "Open content folder in Finder", click: () => shell.showItemInFolder(paths.contentDir) },
+        { label: "Open data folder in Finder", click: () => shell.showItemInFolder(path.join(paths.dataDir, "outlines.db")) },
         { type: "separator" },
         { role: "close" },
       ],
     },
+    // The editor handles its own undo/redo (Cmd-Z / Cmd-Shift-Z) in the page; the roles below cover text fields.
     { label: "Edit", submenu: [{ role: "undo" }, { role: "redo" }, { type: "separator" }, { role: "cut" }, { role: "copy" }, { role: "paste" }, { role: "selectAll" }] },
     {
       label: "View",
@@ -148,17 +128,16 @@ function buildMenu(paths) {
 }
 
 async function main() {
-  const firstRun = !readSettings(SETTINGS_FILE).confirmed;
-  let paths = resolvePaths(SETTINGS_FILE, readBuildOrigin());
+  let paths = resolvePaths(SETTINGS_FILE);
   paths = await confirmFolders(paths);
   if (!paths) return;
   try {
-    ensureFolders(paths, firstRun);
+    ensureFolders(paths);
   } catch (e) {
-    return fail("Law Study cannot start", e.message);
+    return fail("Law Outlines cannot start", e.message);
   }
   if (!fs.existsSync(path.join(STANDALONE_DIR, "server.js"))) {
-    return fail("Law Study cannot start", `The built server is missing from the app bundle:\n${STANDALONE_DIR}\n\nRun npm run package again.`);
+    return fail("Law Outlines cannot start", `The built server is missing from the app bundle:\n${STANDALONE_DIR}\n\nRun npm run package again.`);
   }
   buildMenu(paths);
 
@@ -166,7 +145,6 @@ async function main() {
     server = await startServer({
       standaloneDir: STANDALONE_DIR,
       execPath: process.execPath,
-      contentDir: paths.contentDir,
       dataDir: paths.dataDir,
       networkAccess: readNetworkAccess(paths.dataDir),
       log: (t) => process.stdout.write(t),
@@ -174,20 +152,20 @@ async function main() {
   } catch (e) {
     const msg = String(e.message || e);
     const hint = /EADDRINUSE/.test(msg)
-      ? "The port is already in use. Quit the other copy of Law Study (or the browser version) and try again.\n\n"
+      ? "The port is already in use. Quit the other copy of Law Outlines (or the browser version) and try again.\n\n"
       : /SQLITE_BUSY|database is locked/.test(msg)
-        ? "The database is locked by another program. Close anything else using study.db and try again.\n\n"
+        ? "The database is locked by another program. Close anything else using outlines.db and try again.\n\n"
         : "";
-    return fail("Law Study cannot start", hint + msg);
+    return fail("Law Outlines cannot start", hint + msg);
   }
 
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 860,
-    title: "Law Study",
+    width: 1360,
+    height: 880,
+    title: "Law Outlines",
     webPreferences: { contextIsolation: true, nodeIntegration: false },
   });
-  console.log(`[law-study] server ready at ${server.url}; opening window`);
+  console.log(`[law-outlines] server ready at ${server.url}; opening window`);
   mainWindow.loadURL(server.url);
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     // Print views and raw files open in a second window inside the app; anything else goes to the browser.
@@ -195,9 +173,17 @@ async function main() {
     shell.openExternal(url);
     return { action: "deny" };
   });
-  mainWindow.on("closed", () => { mainWindow = null; app.quit(); });
+  mainWindow.on("closed", () => {
+    mainWindow = null;
+    app.quit();
+  });
 }
+
+// Keep the settings reader exported for tests of the first-run flow.
+module.exports = { readSettings };
 
 app.whenReady().then(main);
 app.on("window-all-closed", () => app.quit());
-app.on("before-quit", () => { if (server) server.stop(); });
+app.on("before-quit", () => {
+  if (server) server.stop();
+});

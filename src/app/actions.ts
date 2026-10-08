@@ -1,124 +1,110 @@
 "use server";
 
-// Server action called by the test runner when a test is submitted (or auto-submitted).
-// Grades against the content on disk and stores the attempt in SQLite.
+// Server actions for the course and outline forms. The editor itself talks to /api/outlines/[id]/sync.
 
 import { redirect } from "next/navigation";
-import { findCourse, findQuestion, isScope, loadContent } from "@/lib/content/loader";
-import { buildReport } from "@/lib/diagnostic";
-import { getAttempt, gradeIssues, insertAttempt, setDiagnosticReport, type IssueResult, type IssueResultEntry, type NewAttemptQuestion } from "@/lib/attempts";
-import { cardByKey } from "@/lib/cards";
-import { rateCard } from "@/lib/reviews";
-import { isRating } from "@/lib/sm2";
+import { revalidatePath } from "next/cache";
+import { getDb } from "@/lib/db";
+import { createCourse, createOutline, deleteCourse, deleteOutline, getCourse, getOutline, updateCourse, updateOutline } from "@/lib/courses";
+import type { NumberingStyle, OutlineKind } from "@/lib/types";
+import { NUMBERING_STYLES, OUTLINE_KINDS } from "@/lib/types";
 
-export type SubmitInput = {
-  courseSlug: string;
-  unitSlug: string;
-  scope: string;
-  startedAt: string;
-  timeLimitSeconds: number;
-  timeUsedSeconds: number;
-  autoSubmitted: boolean;
-  questions: { id: string; courseSlug: string; unitSlug: string; selected: number | null; written: string; flagged: boolean }[];
+const text = (fd: FormData, key: string): string => {
+  const v = fd.get(key);
+  return typeof v === "string" ? v.trim() : "";
 };
 
-export type SubmitResult = { ok: true; attemptId: number } | { ok: false; error: string };
+function optionalInt(fd: FormData, key: string): number | null {
+  const v = text(fd, key);
+  if (!v) return null;
+  const n = Number(v);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : null;
+}
 
-export async function submitAttempt(input: SubmitInput): Promise<SubmitResult> {
-  if (!isScope(input.scope)) return { ok: false, error: "invalid scope" };
-  if (!Array.isArray(input.questions) || input.questions.length === 0) return { ok: false, error: "no questions" };
-  const tree = loadContent();
-  const graded: NewAttemptQuestion[] = [];
-  for (const q of input.questions) {
-    const source = findQuestion(tree, q.courseSlug, q.unitSlug, q.id);
-    if (!source) return { ok: false, error: `question ${q.id} no longer exists in content; attempt not saved` };
-    if (source.type === "issue") {
-      graded.push({
-        type: "issue",
-        courseSlug: q.courseSlug,
-        unitSlug: q.unitSlug,
-        questionId: q.id,
-        written: String(q.written ?? "").replace(/\r\n?/g, "\n"),
-        issueCount: source.issues.length,
-        flagged: Boolean(q.flagged),
-        tags: source.tags,
-      });
-      continue;
-    }
-    const selected = Number.isInteger(q.selected) && (q.selected as number) >= 0 && (q.selected as number) < source.choices.length ? (q.selected as number) : null;
-    graded.push({
-      type: "mc",
-      courseSlug: q.courseSlug,
-      unitSlug: q.unitSlug,
-      questionId: q.id,
-      selected,
-      correctAnswer: source.answer,
-      flagged: Boolean(q.flagged),
-      tags: source.tags,
-    });
-  }
-  const limit = Math.max(0, Math.floor(input.timeLimitSeconds));
-  const attemptId = insertAttempt({
-    courseSlug: input.courseSlug,
-    unitSlug: input.unitSlug,
-    scope: input.scope,
-    startedAt: input.startedAt,
-    finishedAt: new Date().toISOString(),
-    timeLimitSeconds: limit,
-    timeUsedSeconds: Math.min(limit, Math.max(0, Math.floor(input.timeUsedSeconds))),
-    autoSubmitted: Boolean(input.autoSubmitted),
-    questions: graded,
+function topics(fd: FormData): string[] {
+  return Array.from(
+    new Set(
+      text(fd, "syllabusTopics")
+        .split(/\r?\n|,/)
+        .map((t) => t.trim())
+        .filter(Boolean),
+    ),
+  );
+}
+
+export async function createCourseAction(formData: FormData) {
+  const db = getDb();
+  const course = createCourse(db, {
+    title: text(formData, "title") || "Untitled course",
+    examDate: text(formData, "examDate") || null,
+    examFormat: text(formData, "examFormat"),
+    pageLimit: optionalInt(formData, "pageLimit"),
+    studyCourseSlug: text(formData, "studyCourseSlug") || null,
+    syllabusTopics: topics(formData),
   });
-  if (input.scope === "diagnostic") saveReport(attemptId);
-  return { ok: true, attemptId };
+  revalidatePath("/");
+  redirect(`/courses/${course.slug}`);
 }
 
-/** Compute and store the diagnostic report from the attempt's current rows. */
-function saveReport(attemptId: number) {
-  const data = getAttempt(attemptId);
-  if (!data) return;
-  const course = findCourse(loadContent(), data.attempt.course_slug);
+export async function updateCourseAction(formData: FormData) {
+  const db = getDb();
+  const id = Number(text(formData, "id"));
+  const course = getCourse(db, id);
   if (!course) return;
-  setDiagnosticReport(attemptId, JSON.stringify(buildReport(course, data.questions)));
+  updateCourse(db, id, {
+    title: text(formData, "title") || course.title,
+    examDate: text(formData, "examDate") || null,
+    examFormat: text(formData, "examFormat"),
+    pageLimit: optionalInt(formData, "pageLimit"),
+    studyCourseSlug: text(formData, "studyCourseSlug") || null,
+    syllabusTopics: topics(formData),
+    order: optionalInt(formData, "order") ?? course.order,
+  });
+  revalidatePath("/");
+  revalidatePath(`/courses/${course.slug}`);
 }
 
-// Flashcard rating from the review page's plain form. Redirects back to the queue.
-export async function rateCardAction(formData: FormData): Promise<void> {
-  const cardKey = String(formData.get("cardKey") ?? "");
-  const rating = Number(formData.get("rating"));
-  const course = String(formData.get("course") ?? "");
-  if (!isRating(rating)) throw new Error("rating must be 1-4");
-  const card = cardByKey(loadContent(), cardKey);
-  if (!card) throw new Error(`card ${cardKey} no longer exists in content`);
-  rateCard(card, rating);
-  redirect(course ? `/review?course=${encodeURIComponent(course)}` : "/review");
+export async function deleteCourseAction(formData: FormData) {
+  const db = getDb();
+  const id = Number(text(formData, "id"));
+  deleteCourse(db, id);
+  revalidatePath("/");
+  redirect("/");
 }
 
-// Self-grading of issue questions from the results page. Form fields are named r-<position>-<issueIndex>.
-export async function gradeIssuesAction(formData: FormData): Promise<void> {
-  const attemptId = Number(formData.get("attemptId"));
-  const data = getAttempt(attemptId);
-  if (!data) throw new Error("attempt not found");
-  const tree = loadContent();
-  const grades = new Map<number, IssueResultEntry[]>();
-  const missing: string[] = [];
-  for (const row of data.questions) {
-    if (row.question_type !== "issue") continue;
-    const source = findQuestion(tree, row.course_slug, row.unit_slug, row.question_id);
-    if (!source || source.type !== "issue") continue; // removed from content; cannot be graded
-    const entries: IssueResultEntry[] = [];
-    source.issues.forEach((issue, i) => {
-      const v = formData.get(`r-${row.position}-${i}`);
-      if (v !== "spotted" && v !== "missed" && v !== "wrong-rule") {
-        missing.push(`question ${row.position + 1}, issue ${i + 1}`);
-        return;
-      }
-      entries.push({ name: issue.name, ruleNotePath: issue.ruleNotePath, result: v as IssueResult });
-    });
-    grades.set(row.position, entries);
+export async function createOutlineAction(formData: FormData) {
+  const db = getDb();
+  const courseId = Number(text(formData, "courseId"));
+  const course = getCourse(db, courseId);
+  if (!course) return;
+  const kindRaw = text(formData, "kind");
+  const kind: OutlineKind = (OUTLINE_KINDS as readonly string[]).includes(kindRaw) ? (kindRaw as OutlineKind) : "full";
+  const numberingRaw = text(formData, "numbering");
+  const numbering: NumberingStyle | undefined = (NUMBERING_STYLES as readonly string[]).includes(numberingRaw) ? (numberingRaw as NumberingStyle) : undefined;
+  const outline = createOutline(db, courseId, { name: text(formData, "name") || "Untitled", kind, numbering, isDefault: formData.get("isDefault") === "on" });
+  revalidatePath(`/courses/${course.slug}`);
+  redirect(`/courses/${course.slug}/outlines/${outline.id}`);
+}
+
+export async function renameOutlineAction(formData: FormData) {
+  const db = getDb();
+  const id = text(formData, "id");
+  const outline = getOutline(db, id);
+  if (!outline) return;
+  updateOutline(db, id, { name: text(formData, "name") || outline.name, isDefault: formData.get("isDefault") === "on" ? true : undefined });
+  const course = getCourse(db, outline.courseId);
+  if (course) revalidatePath(`/courses/${course.slug}`);
+}
+
+export async function deleteOutlineAction(formData: FormData) {
+  const db = getDb();
+  const id = text(formData, "id");
+  const outline = getOutline(db, id);
+  if (!outline) return;
+  const course = getCourse(db, outline.courseId);
+  deleteOutline(db, id);
+  if (course) {
+    revalidatePath(`/courses/${course.slug}`);
+    redirect(`/courses/${course.slug}`);
   }
-  if (missing.length) redirect(`/attempts/${attemptId}?grade=incomplete#grading`);
-  gradeIssues(attemptId, grades);
-  if (data.attempt.scope === "diagnostic") saveReport(attemptId);
-  redirect(`/attempts/${attemptId}?grade=saved`);
 }

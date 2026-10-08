@@ -40,7 +40,7 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# sqlite database (attempts and progress)
+# local database and uploads when LAW_OUTLINES_DATA_DIR points into the repo
 /data/
 
 # Mac app build outputs

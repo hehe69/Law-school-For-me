@@ -1,22 +1,20 @@
 {
-  "name": "law-study",
+  "name": "law-outlines",
   "version": "0.1.0",
   "private": true,
-  "description": "Local law study app: notes, practice tests, flashcards, maps.",
+  "description": "Local law school outline editor: deep hierarchy, legal numbering, typed nodes, exam-day views.",
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "node scripts/dev.mjs",
     "build": "next build",
     "start": "node scripts/dev.mjs start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test --experimental-strip-types tests/*.test.ts",
     "package": "node scripts/package.mjs"
   },
   "dependencies": {
-    "@xyflow/react": "^12.12.0",
     "better-sqlite3": "^13.0.3",
-    "fflate": "^0.8.3",
-    "gray-matter": "^4.0.3",
-    "html-to-image": "^1.11.13",
     "next": "16.3.8",
     "react": "19.2.8",
     "react-dom": "19.2.8",
@@ -26,7 +24,7 @@
     "@electron/rebuild": "^4.2.0",
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^9.6.0",
-    "@types/node": "^20",
+    "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "electron": "^44.5.1",
@@ -39,6 +37,6 @@
   "allowScripts": {
     "better-sqlite3@13.0.3": true,
     "unrs-resolver@1.12.2": true,
-    "electron@44.5.1": true
+    "electron@44.7.0": true
   }
 }

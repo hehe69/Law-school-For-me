@@ -15,9 +15,9 @@ const eslintConfig = defineConfig([
     // Mac app build outputs
     "dist/**",
   ]),
-  // The Electron shell and build scripts are plain CommonJS / Node scripts.
+  // The Electron shell, build scripts and tests are plain CommonJS / Node scripts.
   {
-    files: ["electron/**/*.cjs", "scripts/**/*.mjs"],
+    files: ["electron/**/*.cjs", "scripts/**/*.mjs", "tests/**/*.ts"],
     rules: { "@typescript-eslint/no-require-imports": "off" },
   },
 ]);

@@ -24,7 +24,10 @@ function probe(url) {
       resolve(res.statusCode !== undefined && res.statusCode < 500);
     });
     req.on("error", () => resolve(false));
-    req.setTimeout(2000, () => { req.destroy(); resolve(false); });
+    req.setTimeout(2000, () => {
+      req.destroy();
+      resolve(false);
+    });
   });
 }
 
@@ -33,7 +36,7 @@ function probe(url) {
  * plain `node` in tests. Resolves with { port, host, url, child, stop } once GET / answers, or rejects with the
  * server's output when it dies or stays silent for `timeoutMs`.
  */
-async function startServer({ standaloneDir, execPath, contentDir, dataDir, networkAccess, timeoutMs = 30000, log = () => {} }) {
+async function startServer({ standaloneDir, execPath, dataDir, networkAccess, timeoutMs = 30000, log = () => {} }) {
   const host = networkAccess ? "0.0.0.0" : "127.0.0.1";
   const port = await findFreePort(host);
   const serverJs = path.join(standaloneDir, "server.js");
@@ -46,8 +49,7 @@ async function startServer({ standaloneDir, execPath, contentDir, dataDir, netwo
       NODE_ENV: "production",
       PORT: String(port),
       HOSTNAME: host,
-      LAW_STUDY_CONTENT_DIR: contentDir,
-      LAW_STUDY_DATA_DIR: dataDir,
+      LAW_OUTLINES_DATA_DIR: dataDir,
     },
     stdio: ["ignore", "pipe", "pipe"],
   });
@@ -63,17 +65,27 @@ async function startServer({ standaloneDir, execPath, contentDir, dataDir, netwo
   const url = `http://127.0.0.1:${port}/`;
   const started = Date.now();
   let exited = null;
-  child.once("exit", (code, signal) => { exited = { code, signal }; });
+  child.once("exit", (code, signal) => {
+    exited = { code, signal };
+  });
 
   while (Date.now() - started < timeoutMs) {
-    if (exited) throw new Error(`The study server stopped (exit ${exited.code ?? exited.signal}).\n\n${output.join("").trim().slice(-2000)}`);
+    if (exited) throw new Error(`The outline server stopped (exit ${exited.code ?? exited.signal}).\n\n${output.join("").trim().slice(-2000)}`);
     if (await probe(url)) {
-      return { port, host, url, child, stop: () => { if (!exited) child.kill(); } };
+      return {
+        port,
+        host,
+        url,
+        child,
+        stop: () => {
+          if (!exited) child.kill();
+        },
+      };
     }
     await new Promise((r) => setTimeout(r, 300));
   }
   child.kill();
-  throw new Error(`The study server did not answer within ${Math.round(timeoutMs / 1000)} seconds.\n\n${output.join("").trim().slice(-2000)}`);
+  throw new Error(`The outline server did not answer within ${Math.round(timeoutMs / 1000)} seconds.\n\n${output.join("").trim().slice(-2000)}`);
 }
 
 module.exports = { findFreePort, startServer, probe };
