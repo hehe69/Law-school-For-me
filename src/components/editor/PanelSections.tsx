@@ -18,7 +18,47 @@ export type AttachmentActions = {
   removeImage: (id: string) => Promise<void>;
   jumpTo: (id: string) => void;
   openLinkPicker: (fromId: string) => void;
+  /** Re-read the study-app note this node was imported from */
+  refreshFromNote: (id: string) => Promise<void>;
 };
+
+export function LinkedNoteSection({ node, actions, onUnlink }: { node: OutlineNode; actions: AttachmentActions; onUnlink: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  if (!node.linkedNotePath) return null;
+  return (
+    <div className="mt-3 rounded border border-blue-200 bg-blue-50 p-2 text-xs">
+      <div className="flex items-center gap-1 text-blue-900">
+        <span>⛓</span>
+        <span className="min-w-0 flex-1 truncate font-mono" title={node.linkedNotePath}>
+          {node.linkedNotePath}
+        </span>
+      </div>
+      <div className="mt-1 flex items-center gap-2">
+        <button
+          type="button"
+          className="btn py-0 text-xs"
+          disabled={busy}
+          onClick={() => {
+            setBusy(true);
+            setMessage(null);
+            actions
+              .refreshFromNote(node.id)
+              .then(() => setMessage("Refreshed from the note."))
+              .catch((e: Error) => setMessage(e.message))
+              .finally(() => setBusy(false));
+          }}
+        >
+          {busy ? "Refreshing…" : "Refresh from note"}
+        </button>
+        <button type="button" className="text-gray-500 hover:text-gray-900" onClick={onUnlink} title="Keep the node, forget the note">
+          Unlink
+        </button>
+        {message && <span className="text-gray-600">{message}</span>}
+      </div>
+    </div>
+  );
+}
 
 const titleOf = (nodes: Record<string, OutlineNode>, id: string) => nodes[id]?.title || (nodes[id] ? "(untitled)" : "(in another outline)");
 

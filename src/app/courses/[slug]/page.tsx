@@ -31,6 +31,17 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
           {course.examFormat ? ` · ${course.examFormat}` : ""}
         </p>
       )}
+      <nav className="mt-3 flex flex-wrap gap-2 text-sm">
+        <Link href={`/courses/${course.slug}/syllabus`} className="btn">
+          Syllabus
+        </Link>
+        <Link href={`/courses/${course.slug}/import`} className="btn">
+          Import
+        </Link>
+        <Link href={`/courses/${course.slug}/inbox`} className="btn">
+          Inbox
+        </Link>
+      </nav>
 
       <section className="mt-6">
         <h2 className="text-base font-medium">Outlines</h2>

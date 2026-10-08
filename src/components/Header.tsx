@@ -18,6 +18,9 @@ export function Header() {
         <Link href="/" className="hover:text-gray-900">
           Courses
         </Link>
+        <Link href="/settings" className="hover:text-gray-900">
+          Settings
+        </Link>
       </nav>
       <div className="ml-auto flex items-center">{courses.length > 0 && <CaptureBox courses={courses} unfiled={unfiled} />}</div>
     </header>

@@ -8,12 +8,14 @@ summarises or fills sections for you.
 No AI features, no accounts, no hosting. Everything lives in a SQLite
 database and an uploads folder on your Mac.
 
-> Build status: **phases 1 and 2 of 6** are done (data model, courses and
+> Build status: **phases 1 to 3 of 6** are done (data model, courses and
 > outlines, the tree editor, node fields in the side panel, images, links
-> and backlinks, sources, tags, the scratch outline with "move to", and the
-> capture box with the inbox). Phases 3–6 add the syllabus and imports,
-> exam-day views, drills and progress, and printing, exports, snapshots,
-> backups and the packaged Mac app. This README grows with each phase.
+> and backlinks, sources, tags, the scratch outline with "move to", the
+> capture box with the inbox, the syllabus PDF pane, study-app import with
+> linked nodes, .docx / .md import, and the comparison pane). Phases 4–6
+> add exam-day views, drills and progress, and printing, exports,
+> snapshots, backups and the packaged Mac app. This README grows with each
+> phase.
 
 ## Run it
 
@@ -97,6 +99,57 @@ the same list.
 - Everything autosaves a moment after each change ("Saved" in the toolbar);
   ⌘S saves at once. Undo covers tree and field edits; links, sources and
   images save immediately and are not undoable.
+
+## Syllabus
+
+Each course page has a **Syllabus** page: upload the syllabus PDF (stored as
+`uploads/<course-slug>/syllabus.pdf`; re-uploading replaces the file and
+keeps the topics) and edit the course's **syllabus topics**, one per line.
+Topics are offered as tags on every node and drive the gaps view.
+
+In the editor, **Syllabus** in the toolbar opens the PDF in a split pane
+beside the tree (rendered with pdf.js, so the text is selectable). Select
+text in the pane and press ⌘⇧H, or click "Selection → heading", to create a
+heading at the current level (a sibling after the selected row). A
+selection spanning several lines makes one heading per line. With skeleton
+mode on, the new headings start as "skeleton".
+
+## Study-app import
+
+**Settings** holds the path to the study app's content folder (default
+`~/Documents/law-school-for-me/content`) and lists the courses it finds.
+Link a course by setting its *study-app course slug* in the course settings;
+the course's **Import** page then lists the study app's units with their
+rule, case and class notes.
+
+- A **rule note** becomes a rule node (rule statement, elements with their
+  definitions, exceptions tied to elements, the Wisconsin variation, the
+  note's body as notes). A **case note** becomes a case node (facts,
+  holding, why it matters; issue and rule go into the notes). A **class
+  note** becomes a professor note (date, what he said), and its
+  `modifiesRule` is resolved to the imported rule node.
+- A **whole unit** imports as a heading with its notes beneath; the unit's
+  `syllabusTopics` can be added to the course's topics.
+- Imported nodes keep a link to their note (⛓ in the tree, the path in the
+  panel) and a hash of the note. The Import page's **Linked nodes** list
+  shows which notes changed since the import ("check for changes", also in
+  the ⌘K palette); **Refresh from note** re-reads the note and overwrites
+  the node's title, fields and body while keeping its status, tags,
+  children and links. Running an import again skips notes that already have
+  nodes. Nothing is ever written back to the study app.
+- The palette command **Expand elements into child nodes** turns a rule's
+  elements into element nodes under it (each remembers its element number).
+
+## Importing and comparing files
+
+- **Import a .docx or .md file** (Import page) creates a new full outline:
+  headings give the levels, list items nest by indentation under the
+  nearest heading, and paragraphs become the notes of the node above them.
+  Word files are read through mammoth, so Word's heading styles and lists
+  carry over. You can then rearrange the result.
+- **Compare…** in the editor toolbar loads a friend's .docx or .md outline
+  into a read-only pane beside the tree, with a filter box. It is never
+  saved or merged.
 
 ## Data model
 

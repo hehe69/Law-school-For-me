@@ -1,7 +1,7 @@
 "use client";
 
 // The tree editor: numbering, keyboard, drag and drop, multi-select, status, skeleton mode, undo/redo and
-// autosave. The tree state is an immutable NodeMap kept in the history hook; every edit produces a new map,
+// autosave. The tree state is an immutable NodeMap kept in the replaceNodes hook; every edit produces a new map,
 // and the autosave hook sends the difference to the server.
 
 import Link from "next/link";
@@ -38,6 +38,10 @@ import { CommandPalette, type PaletteItem } from "./CommandPalette";
 import { NodePicker } from "./NodePicker";
 import { MoveToDialog } from "./MoveToDialog";
 import type { AttachmentActions } from "./PanelSections";
+import { PdfPane } from "./PdfPane";
+import { ComparePane } from "./ComparePane";
+import type { ImportedNode } from "@/lib/importers";
+import { asElements } from "@/lib/fields";
 
 type OutlineSummary = { id: string; name: string; kind: OutlineKind };
 
@@ -46,7 +50,13 @@ type Props = {
   outlines: OutlineSummary[];
   /** Node to reveal and select on load (from ?node= in the URL) */
   initialNodeId: string | null;
+  /** The course's syllabus PDF, when uploaded */
+  syllabusUrl: string | null;
+  /** Open the syllabus pane on load (?pane=syllabus) */
+  initialPane: "syllabus" | null;
 };
+
+type Pane = { kind: "none" } | { kind: "syllabus" } | { kind: "compare"; name: string; tree: ImportedNode[]; count: number };
 
 const NO_BADGES: RowBadges = { links: 0, sources: 0, images: 0 };
 
@@ -79,12 +89,13 @@ function toMap(nodes: OutlineNode[]): NodeMap {
   return map;
 }
 
-export function Editor({ bundle, outlines, initialNodeId }: Props) {
+export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPane }: Props) {
   const router = useRouter();
   const outlineId = bundle.outline.id;
   const initialMap = useMemo(() => toMap(bundle.nodes), [bundle.nodes]);
   const history = useHistory<NodeMap>(initialMap);
-  const nodes = history.present;
+  // The hook returns a new object each render; depend on its stable functions, never on the object.
+  const { present: nodes, commit: commitRaw, replace: replaceNodes, undo: undoRaw, redo: redoRaw, canUndo, canRedo } = history;
   const autosave = useAutosave(outlineId, initialMap, nodes);
 
   // Links, sources and images are saved straight away through their own routes (not part of undo).
@@ -95,6 +106,8 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
   const [linkFrom, setLinkFrom] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const compareInputRef = useRef<HTMLInputElement>(null);
+  const [pane, setPane] = useState<Pane>(initialPane === "syllabus" && syllabusUrl ? { kind: "syllabus" } : { kind: "none" });
 
   const [outline, setOutline] = useState(bundle.outline);
   const numbering = outline.numbering;
@@ -160,7 +173,7 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
 
   // ---- helpers over the current tree ----------------------------------------------------------------
 
-  const commit = useCallback((next: NodeMap, key?: string) => history.commit(next, key), [history]);
+  const commit = commitRaw;
 
   const requestFocus = useCallback((id: string, caret: "start" | "end" = "end") => {
     setFocusRequest((f) => ({ id, caret, token: (f?.token ?? 0) + 1 }));
@@ -343,9 +356,9 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
       const cur = latest.current.nodes;
       const node = cur[id];
       if (!node) return;
-      history.replace({ ...cur, [id]: { ...node, collapsed: !node.collapsed } });
+      replaceNodes({ ...cur, [id]: { ...node, collapsed: !node.collapsed } });
     },
-    [history],
+    [replaceNodes],
   );
 
   const setStatusFor = useCallback(
@@ -375,11 +388,11 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
       if (!cur[id]) return;
       setSearch("");
       const revealed = revealNode(cur, id);
-      if (revealed !== cur) history.replace(revealed);
+      if (revealed !== cur) replaceNodes(revealed);
       selectOnly(id);
       requestFocus(id);
     },
-    [history, requestFocus, selectOnly],
+    [replaceNodes, requestFocus, selectOnly],
   );
 
   const focusRelative = useCallback(
@@ -414,12 +427,8 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
     [outlineId],
   );
 
-  const undo = useCallback(() => {
-    history.undo();
-  }, [history]);
-  const redo = useCallback(() => {
-    history.redo();
-  }, [history]);
+  const undo = undoRaw;
+  const redo = redoRaw;
 
   const flash = useCallback((message: string) => {
     setNotice(message);
@@ -483,8 +492,90 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
       },
       jumpTo,
       openLinkPicker: (fromId) => setLinkFrom(fromId),
+      refreshFromNote: async (id) => {
+        const fresh = await api.post<OutlineNode>(`/api/nodes/${id}/refresh`, {});
+        const cur = latest.current.nodes;
+        if (cur[id]) replaceNodes({ ...cur, [id]: { ...cur[id], ...fresh, collapsed: cur[id].collapsed } });
+      },
     }),
-    [jumpTo, uploadImages],
+    [replaceNodes, jumpTo, uploadImages],
+  );
+
+  /** Headings from selected syllabus text: one per non-empty line, as siblings after the active node. */
+  const addHeadingsFromText = useCallback(
+    (text: string) => {
+      const lines = Array.from(new Set(text.split(/\r?\n/).map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean)));
+      if (!lines.length) return;
+      const { nodes: cur, active: act, skeleton: skel } = latest.current;
+      const status: NodeStatus = skel ? "skeleton" : "empty";
+      let next = cur;
+      let parentId: string | null = null;
+      let index = childrenOf(cur, null).length;
+      if (act && cur[act]) {
+        parentId = cur[act].parentId;
+        index = childrenOf(cur, parentId).findIndex((n) => n.id === act) + 1;
+      }
+      let lastId: string | null = null;
+      for (const line of lines) {
+        const fresh = makeNode(outlineId, "heading", status, { title: line.length > 200 ? line.slice(0, 200) : line });
+        next = insertNode(next, fresh, parentId, index++);
+        lastId = fresh.id;
+      }
+      commit(next);
+      if (lastId) {
+        selectOnly(lastId);
+        requestFocus(lastId);
+      }
+      flash(`Added ${lines.length} heading${lines.length === 1 ? "" : "s"} from the syllabus.`);
+    },
+    [commit, flash, outlineId, requestFocus, selectOnly],
+  );
+
+  /** A rule's elements become element child nodes (each remembers its element number). */
+  const expandElements = useCallback(
+    (id: string) => {
+      const cur = latest.current.nodes;
+      const rule = cur[id];
+      if (!rule || rule.type !== "rule") return;
+      const elements = asElements(rule.fields.elements).filter((e) => e.text.trim());
+      if (!elements.length) {
+        flash("This rule has no elements to expand.");
+        return;
+      }
+      const existing = new Set(childrenOf(cur, id).map((c) => c.linkedElementIndex));
+      let next = cur;
+      let index = childrenOf(cur, id).length;
+      let made = 0;
+      elements.forEach((el, i) => {
+        if (existing.has(i + 1)) return;
+        const fresh = makeNode(outlineId, "element", latest.current.skeleton ? "skeleton" : "drafted", {
+          title: el.text,
+          fields: { text: el.text, definition: el.definition, factors: [], satisfiedWhen: "" },
+          linkedElementIndex: i + 1,
+        });
+        next = insertNode(next, fresh, id, index++);
+        made++;
+      });
+      if (next[id].collapsed) next = { ...next, [id]: { ...next[id], collapsed: false } };
+      commit(next);
+      flash(made ? `Made ${made} element node${made === 1 ? "" : "s"}.` : "Every element already has a node.");
+    },
+    [commit, flash, outlineId],
+  );
+
+  const openCompareFile = useCallback(() => compareInputRef.current?.click(), []);
+  const loadCompareFile = useCallback(
+    async (file: File) => {
+      const form = new FormData();
+      form.append("file", file, file.name);
+      try {
+        const result = await api.upload<{ name: string; tree: ImportedNode[]; count: number }>("/api/parse-outline", form);
+        setPane({ kind: "compare", ...result });
+      } catch (e) {
+        flash(`Could not read the file: ${(e as Error).message}`);
+      }
+    },
+    [flash],
   );
 
   /** Move a node with its subtree to another outline (or elsewhere in this one). */
@@ -510,7 +601,7 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
         return;
       }
       const removed = removeSubtree(cur, nodeId);
-      history.replace(removed.nodes);
+      replaceNodes(removed.nodes);
       const target = outlines.find((o) => o.id === targetOutlineId);
       flash(`Moved "${node.title || "(untitled)"}" to ${target?.name ?? "the other outline"}.`);
       const remaining = flatten(removed.nodes, true);
@@ -520,7 +611,7 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
         setActive(null);
       }
     },
-    [autosave, commit, flash, history, outlineId, outlines, requestFocus, selectOnly],
+    [autosave, commit, flash, replaceNodes, outlineId, outlines, requestFocus, selectOnly],
   );
 
   // Pasting an image anywhere in the editor attaches it to the active node.
@@ -635,6 +726,8 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
       );
       cmd("move-to", "Move to another outline…", () => setMoveTarget(act));
       cmd("link", "Add a link to another node…", () => setLinkFrom(act));
+      if (cur[act]?.type === "rule") cmd("expand-elements", "Expand elements into child nodes", () => expandElements(act));
+      if (cur[act]?.linkedNotePath) cmd("refresh-note", "Refresh from the study-app note", () => void actions.refreshFromNote(act).catch((e: Error) => flash(e.message)));
       cmd("source", "Add a source", () => void actions.addSource(act, "casebook", "", null).then(() => setPanelOpen(true)));
       cmd("image", "Attach an image…", () => fileInputRef.current?.click());
       for (const s of NODE_STATUSES) cmd(`status:${s}`, `Set status: ${STATUS_LABELS[s]}`, () => setStatusFor(selectionIds(act), s));
@@ -645,13 +738,18 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
     cmd("skeleton", skel ? "Turn skeleton mode off" : "Turn skeleton mode on", () => patchOutline({ options: { skeleton: !skel } }));
     for (const n of NUMBERING_STYLES) if (n !== numbering) cmd(`numbering:${n}`, `Numbering: ${NUMBERING_LABELS[n]}`, () => patchOutline({ numbering: n }));
     const levels = maxDepth(cur);
-    for (let level = 1; level <= Math.max(1, levels - 1); level++) cmd(`collapse:${level}`, `Collapse to level ${level}`, () => history.replace(collapseToLevel(latest.current.nodes, level)));
-    cmd("expand", "Expand all", () => history.replace(collapseToLevel(latest.current.nodes, 0)));
+    for (let level = 1; level <= Math.max(1, levels - 1); level++) cmd(`collapse:${level}`, `Collapse to level ${level}`, () => replaceNodes(collapseToLevel(latest.current.nodes, level)));
+    cmd("expand", "Expand all", () => replaceNodes(collapseToLevel(latest.current.nodes, 0)));
     cmd("undo", "Undo", undo, shortcutLabel("Mod+Z"));
     cmd("redo", "Redo", redo, shortcutLabel("Mod+Shift+Z"));
     cmd("panel", "Show / hide side panel", () => setPanelOpen((o) => !o));
     cmd("help", "Keyboard shortcuts", () => setHelpOpen(true));
     cmd("save", "Save now", () => void autosave.saveNow(), shortcutLabel("Mod+S"));
+    if (syllabusUrl) cmd("syllabus", "Open the syllabus pane", () => setPane({ kind: "syllabus" }));
+    else cmd("syllabus-page", "Upload a syllabus PDF", () => router.push(`/courses/${bundle.course.slug}/syllabus`));
+    cmd("compare", "Compare with a friend's outline file…", openCompareFile);
+    cmd("check-notes", "Check linked study-app notes for changes", () => router.push(`/courses/${bundle.course.slug}/import`));
+    cmd("close-pane", "Close the left pane", () => setPane({ kind: "none" }));
     cmd("course", "Back to the course page", () => router.push(`/courses/${bundle.course.slug}`));
 
     const nodeItems: PaletteItem[] = flatten(cur, false).map((r) => ({
@@ -674,11 +772,14 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
     autosave,
     bundle.course.slug,
     deleteIds,
-    history,
+    expandElements,
+    flash,
+    replaceNodes,
     indentSelection,
     jumpTo,
     moveNode,
     numbering,
+    openCompareFile,
     outdentSelection,
     patchOutline,
     redo,
@@ -686,6 +787,7 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
     selectionIds,
     setStatusFor,
     setTypeFor,
+    syllabusUrl,
     toggleCollapse,
     topLevelSelection,
     undo,
@@ -721,11 +823,17 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
       } else if (k === "s") {
         e.preventDefault();
         void autosave.saveNow();
+      } else if (k === "h" && e.shiftKey) {
+        const text = window.getSelection()?.toString().trim() ?? "";
+        if (text) {
+          e.preventDefault();
+          addHeadingsFromText(text);
+        }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [autosave, openPalette, redo, undo]);
+  }, [addHeadingsFromText, autosave, openPalette, redo, undo]);
 
   // ---- drag and drop ----------------------------------------------------------------------------------
 
@@ -876,7 +984,7 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
           onChange={(e) => {
             const v = e.target.value;
             if (v === "") return;
-            history.replace(collapseToLevel(latest.current.nodes, Number(v)));
+            replaceNodes(collapseToLevel(latest.current.nodes, Number(v)));
           }}
           aria-label="Collapse to level"
         >
@@ -888,10 +996,10 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
           ))}
           <option value="0">Expand all</option>
         </select>
-        <button type="button" className="btn" onClick={undo} disabled={!history.canUndo} title={`Undo (${shortcutLabel("Mod+Z")})`}>
+        <button type="button" className="btn" onClick={undo} disabled={!canUndo} title={`Undo (${shortcutLabel("Mod+Z")})`}>
           Undo
         </button>
-        <button type="button" className="btn" onClick={redo} disabled={!history.canRedo} title={`Redo (${shortcutLabel("Mod+Shift+Z")})`}>
+        <button type="button" className="btn" onClick={redo} disabled={!canRedo} title={`Redo (${shortcutLabel("Mod+Shift+Z")})`}>
           Redo
         </button>
         <input
@@ -918,6 +1026,29 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
         <button type="button" className="btn" onClick={() => setHelpOpen(true)} title="Keyboard shortcuts">
           ?
         </button>
+        {syllabusUrl ? (
+          <button type="button" className={`btn ${pane.kind === "syllabus" ? "border-blue-500 bg-blue-50" : ""}`} onClick={() => setPane((p) => (p.kind === "syllabus" ? { kind: "none" } : { kind: "syllabus" }))} title="Show the syllabus PDF beside the outline">
+            Syllabus
+          </button>
+        ) : (
+          <Link href={`/courses/${bundle.course.slug}/syllabus`} className="btn" title="Upload a syllabus PDF to view it beside the outline">
+            Syllabus
+          </Link>
+        )}
+        <button type="button" className={`btn ${pane.kind === "compare" ? "border-blue-500 bg-blue-50" : ""}`} onClick={openCompareFile} title="Load a friend's outline (.docx or .md) in a read-only pane">
+          Compare…
+        </button>
+        <input
+          ref={compareInputRef}
+          type="file"
+          accept=".docx,.md,.markdown,.txt"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            e.target.value = "";
+            if (f) void loadCompareFile(f);
+          }}
+        />
         <span className="ml-auto text-xs text-gray-500">{allRows.length} nodes</span>
         {notice && <span className="text-xs text-amber-700">{notice}</span>}
         <span className={`text-xs ${saveColor}`} title={autosave.error ?? (autosave.savedAt ? `Last saved ${new Date(autosave.savedAt).toLocaleTimeString()}` : "")}>
@@ -929,6 +1060,18 @@ export function Editor({ bundle, outlines, initialNodeId }: Props) {
       </div>
 
       <div className="flex min-h-0 flex-1">
+        {/* Left pane: syllabus PDF or a friend's outline */}
+        {pane.kind === "syllabus" && syllabusUrl && (
+          <div className="w-[42%] min-w-[320px] shrink-0">
+            <PdfPane url={syllabusUrl} onAddHeadings={addHeadingsFromText} onClose={() => setPane({ kind: "none" })} />
+          </div>
+        )}
+        {pane.kind === "compare" && (
+          <div className="w-[42%] min-w-[320px] shrink-0">
+            <ComparePane name={pane.name} tree={pane.tree} count={pane.count} onClose={() => setPane({ kind: "none" })} onReplace={openCompareFile} />
+          </div>
+        )}
+
         {/* Tree */}
         <div
           ref={treeRef}

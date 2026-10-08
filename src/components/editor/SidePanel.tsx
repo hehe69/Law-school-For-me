@@ -10,7 +10,7 @@ import { asElements, NODE_TYPE_DEFS, STATUS_LABELS, typeDef } from "@/lib/fields
 import { FieldEditor } from "./FieldEditor";
 import { TagInput } from "./TagInput";
 import { Markdown } from "@/components/Markdown";
-import { ImagesSection, LinksSection, SourcesSection, type AttachmentActions } from "./PanelSections";
+import { ImagesSection, LinkedNoteSection, LinksSection, SourcesSection, type AttachmentActions } from "./PanelSections";
 
 type Props = {
   node: OutlineNode | null;
@@ -72,6 +72,8 @@ export function SidePanel({ node, nodes, nodesById, links, sources, images, acti
           </button>
         </div>
       </div>
+
+      <LinkedNoteSection node={node} actions={actions} onUnlink={() => onPatch(node.id, { linkedNotePath: null, linkedNoteHash: null, linkedElementIndex: null })} />
 
       <label className="label mt-3" htmlFor="panel-title">
         {def.titleLabel}
