@@ -1,10 +1,12 @@
 "use client";
 
-import { memo, type KeyboardEvent, type MouseEvent, type DragEvent } from "react";
+import { memo, useState, type KeyboardEvent, type MouseEvent, type DragEvent } from "react";
 import type { OutlineNode } from "@/lib/types";
 import { nodeSummary, STATUS_DOT_CLASS, STATUS_LABELS, typeDef } from "@/lib/fields";
 
 export type DropWhere = "before" | "after" | "inside";
+
+export type RowBadges = { links: number; sources: number; images: number };
 
 export type RowHandlers = {
   onTitleChange: (id: string, title: string) => void;
@@ -16,6 +18,7 @@ export type RowHandlers = {
   onDragOver: (e: DragEvent, id: string) => void;
   onDrop: (e: DragEvent, id: string) => void;
   onDragEnd: () => void;
+  onFileDrop: (id: string, files: File[]) => void;
   registerInput: (id: string, el: HTMLInputElement | null) => void;
 };
 
@@ -29,24 +32,45 @@ type Props = {
   skeleton: boolean;
   dropWhere: DropWhere | null;
   dimmed: boolean;
+  badges: RowBadges;
   handlers: RowHandlers;
 };
 
 const INDENT = 22;
 
-function RowImpl({ node, depth, label, hasChildren, selected, active, skeleton, dropWhere, dimmed, handlers }: Props) {
+function RowImpl({ node, depth, label, hasChildren, selected, active, skeleton, dropWhere, dimmed, badges, handlers }: Props) {
   const def = typeDef(node.type);
   const summary = skeleton ? "" : nodeSummary(node);
+  const [fileOver, setFileOver] = useState(false);
   return (
     <div
       data-node-id={node.id}
-      className={`group relative flex items-start gap-1 rounded px-1 ${selected ? "bg-blue-50" : "hover:bg-gray-50"} ${active ? "ring-1 ring-blue-300" : ""} ${dimmed ? "opacity-40" : ""}`}
+      className={`group relative flex items-start gap-1 rounded px-1 ${selected ? "bg-blue-50" : "hover:bg-gray-50"} ${active ? "ring-1 ring-blue-300" : ""} ${dimmed ? "opacity-40" : ""} ${fileOver ? "bg-amber-50 ring-1 ring-amber-400" : ""}`}
       style={{ paddingLeft: depth * INDENT + 4 }}
       onMouseDown={(e) => {
         if ((e.target as HTMLElement).tagName !== "INPUT") handlers.onFocusRow(node.id, e);
       }}
-      onDragOver={(e) => handlers.onDragOver(e, node.id)}
-      onDrop={(e) => handlers.onDrop(e, node.id)}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes("Files")) {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+          if (!fileOver) setFileOver(true);
+          return;
+        }
+        handlers.onDragOver(e, node.id);
+      }}
+      onDragLeave={() => {
+        if (fileOver) setFileOver(false);
+      }}
+      onDrop={(e) => {
+        if (e.dataTransfer.types.includes("Files")) {
+          e.preventDefault();
+          setFileOver(false);
+          handlers.onFileDrop(node.id, Array.from(e.dataTransfer.files));
+          return;
+        }
+        handlers.onDrop(e, node.id);
+      }}
     >
       {dropWhere === "before" && <div className="pointer-events-none absolute left-0 right-0 top-0 h-0.5 bg-blue-500" style={{ left: depth * INDENT + 4 }} />}
       {dropWhere === "after" && <div className="pointer-events-none absolute left-0 right-0 bottom-0 h-0.5 bg-blue-500" style={{ left: depth * INDENT + 4 }} />}
@@ -113,9 +137,12 @@ function RowImpl({ node, depth, label, hasChildren, selected, active, skeleton, 
             {summary}
           </span>
         )}
-        {node.linkedNotePath && (
-          <span className="shrink-0 text-[11px] text-gray-400" title={`Linked to ${node.linkedNotePath}`}>
-            ⛓
+        {(badges.links > 0 || badges.sources > 0 || badges.images > 0 || node.linkedNotePath) && !skeleton && (
+          <span className="flex shrink-0 gap-1 font-mono text-[10px] leading-5 text-gray-400">
+            {badges.links > 0 && <span title={`${badges.links} link${badges.links === 1 ? "" : "s"}`}>⇄{badges.links}</span>}
+            {badges.sources > 0 && <span title={`${badges.sources} source${badges.sources === 1 ? "" : "s"}`}>§{badges.sources}</span>}
+            {badges.images > 0 && <span title={`${badges.images} image${badges.images === 1 ? "" : "s"}`}>▣{badges.images}</span>}
+            {node.linkedNotePath && <span title={`Linked to ${node.linkedNotePath}`}>⛓</span>}
           </span>
         )}
         {node.tags.length > 0 && !skeleton && (

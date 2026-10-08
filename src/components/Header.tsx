@@ -1,7 +1,14 @@
 import Link from "next/link";
+import { getDb } from "@/lib/db";
+import { listCourses } from "@/lib/courses";
+import { countUnfiled } from "@/lib/attachments";
+import { CaptureBox } from "./CaptureBox";
 
-/** The top bar on every page. The capture box joins it in phase 2. */
+/** The top bar on every page, with the capture box. */
 export function Header() {
+  const db = getDb();
+  const courses = listCourses(db).map((c) => ({ id: c.id, title: c.title, slug: c.slug }));
+  const unfiled = countUnfiled(db);
   return (
     <header className="flex h-11 shrink-0 items-center gap-4 border-b border-gray-200 bg-gray-50 px-4 print:hidden">
       <Link href="/" className="text-sm font-semibold tracking-tight text-gray-900">
@@ -12,7 +19,7 @@ export function Header() {
           Courses
         </Link>
       </nav>
-      <div className="ml-auto" id="header-right" />
+      <div className="ml-auto flex items-center">{courses.length > 0 && <CaptureBox courses={courses} unfiled={unfiled} />}</div>
     </header>
   );
 }

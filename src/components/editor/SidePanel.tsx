@@ -1,30 +1,40 @@
 "use client";
 
-// The right-hand panel: title, type, status, tags, typed fields and the markdown body of the active node.
-// Links, sources and images join it in phase 2.
+// The right-hand panel: title, type, status, tags, typed fields, the markdown body, links, sources and images
+// of the active node.
 
-import { useEffect, useRef, type KeyboardEvent } from "react";
-import type { NodeStatus, NodeType, OutlineNode } from "@/lib/types";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
+import type { ImageRow, Link, NodeStatus, NodeType, OutlineNode, Source } from "@/lib/types";
 import { NODE_STATUSES, NODE_TYPES } from "@/lib/types";
 import { asElements, NODE_TYPE_DEFS, STATUS_LABELS, typeDef } from "@/lib/fields";
 import { FieldEditor } from "./FieldEditor";
+import { TagInput } from "./TagInput";
+import { Markdown } from "@/components/Markdown";
+import { ImagesSection, LinksSection, SourcesSection, type AttachmentActions } from "./PanelSections";
 
 type Props = {
   node: OutlineNode | null;
   nodes: OutlineNode[];
+  nodesById: Record<string, OutlineNode>;
+  links: Link[];
+  sources: Source[];
+  images: ImageRow[];
+  actions: AttachmentActions;
   skeleton: boolean;
   topicSuggestions: string[];
   onPatch: (id: string, patch: Partial<OutlineNode>, coalesceKey?: string) => void;
   onField: (id: string, key: string, value: unknown) => void;
   onRetype: (id: string, type: NodeType) => void;
+  onMoveTo: (id: string) => void;
   onEscape: () => void;
   onClose: () => void;
   /** Set when the panel should focus its first field (after "edit fields" from the tree) */
   focusToken: number;
 };
 
-export function SidePanel({ node, nodes, skeleton, topicSuggestions, onPatch, onField, onRetype, onEscape, onClose, focusToken }: Props) {
+export function SidePanel({ node, nodes, nodesById, links, sources, images, actions, skeleton, topicSuggestions, onPatch, onField, onRetype, onMoveTo, onEscape, onClose, focusToken }: Props) {
   const titleRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = useState(false);
   useEffect(() => {
     if (focusToken > 0) titleRef.current?.focus();
   }, [focusToken]);
@@ -50,12 +60,17 @@ export function SidePanel({ node, nodes, skeleton, topicSuggestions, onPatch, on
   const elements = node.type === "rule" ? asElements(node.fields.elements) : undefined;
 
   return (
-    <aside className="flex w-full flex-col overflow-y-auto border-l border-gray-200 bg-gray-50 p-4 text-sm">
+    <aside className="flex h-full w-full flex-col overflow-y-auto border-l border-gray-200 bg-gray-50 p-4 text-sm">
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium uppercase tracking-wide text-gray-500">{def.label}</span>
-        <button type="button" className="text-xs text-gray-500 hover:text-gray-900" onClick={onClose}>
-          Hide panel
-        </button>
+        <div className="flex items-center gap-3">
+          <button type="button" className="text-xs text-gray-500 hover:text-gray-900" title="Move this node (with its children) into another outline" onClick={() => onMoveTo(node.id)}>
+            Move to…
+          </button>
+          <button type="button" className="text-xs text-gray-500 hover:text-gray-900" onClick={onClose}>
+            Hide panel
+          </button>
+        </div>
       </div>
 
       <label className="label mt-3" htmlFor="panel-title">
@@ -95,38 +110,8 @@ export function SidePanel({ node, nodes, skeleton, topicSuggestions, onPatch, on
       ) : (
         <>
           <div className="mt-3">
-            <label className="label" htmlFor="panel-tags">
-              Tags
-            </label>
-            <input
-              id="panel-tags"
-              className="input"
-              list="topic-suggestions"
-              placeholder="comma separated"
-              value={node.tags.join(", ")}
-              onChange={(e) =>
-                onPatch(
-                  node.id,
-                  {
-                    tags: Array.from(
-                      new Set(
-                        e.target.value
-                          .split(",")
-                          .map((t) => t.trim())
-                          .filter(Boolean),
-                      ),
-                    ),
-                  },
-                  `tags:${node.id}`,
-                )
-              }
-              onKeyDown={esc}
-            />
-            <datalist id="topic-suggestions">
-              {topicSuggestions.map((t) => (
-                <option key={t} value={t} />
-              ))}
-            </datalist>
+            <label className="label">Tags</label>
+            <TagInput value={node.tags} suggestions={topicSuggestions} onChange={(tags) => onPatch(node.id, { tags }, `tags:${node.id}`)} onEscape={onEscape} />
           </div>
 
           {def.fields.map((spec) => (
@@ -138,18 +123,35 @@ export function SidePanel({ node, nodes, skeleton, topicSuggestions, onPatch, on
           ))}
 
           <div className="mt-3">
-            <label className="label" htmlFor="panel-body">
-              {node.type === "free" ? "Markdown" : "Notes (markdown)"}
-            </label>
-            <textarea
-              id="panel-body"
-              className="input min-h-[6rem] resize-y font-[inherit]"
-              rows={Math.min(16, Math.max(4, node.body.split("\n").length + 1))}
-              value={node.body}
-              onChange={(e) => onPatch(node.id, { body: e.target.value }, `body:${node.id}`)}
-              onKeyDown={esc}
-            />
+            <div className="flex items-center justify-between">
+              <label className="label mb-0" htmlFor="panel-body">
+                {node.type === "free" ? "Markdown" : "Notes (markdown)"}
+              </label>
+              <button type="button" className="text-xs text-gray-500 hover:text-gray-900" onClick={() => setPreview((p) => !p)}>
+                {preview ? "Edit" : "Preview"}
+              </button>
+            </div>
+            {preview ? (
+              <div className="mt-1 min-h-[3rem] rounded border border-gray-200 bg-white p-2">
+                <Markdown text={node.body} />
+                {!node.body.trim() && <span className="text-xs text-gray-400">Nothing written yet.</span>}
+              </div>
+            ) : (
+              <textarea
+                id="panel-body"
+                className="input mt-1 min-h-[6rem] resize-y font-[inherit]"
+                rows={Math.min(16, Math.max(4, node.body.split("\n").length + 1))}
+                value={node.body}
+                placeholder="Markdown. **bold**, *italic*, - lists, > quotes."
+                onChange={(e) => onPatch(node.id, { body: e.target.value }, `body:${node.id}`)}
+                onKeyDown={esc}
+              />
+            )}
           </div>
+
+          <ImagesSection node={node} images={images} actions={actions} />
+          <LinksSection node={node} links={links} nodes={nodesById} actions={actions} />
+          <SourcesSection node={node} sources={sources} actions={actions} />
         </>
       )}
 

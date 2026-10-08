@@ -7,8 +7,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type MouseEvent } from "react";
-import type { NodeMap, NodeStatus, NodeType, NumberingStyle, OutlineBundle, OutlineKind, OutlineNode } from "@/lib/types";
+import type { ImageRow, Link as LinkRow, LinkKind, NodeMap, NodeStatus, NodeType, NumberingStyle, OutlineBundle, OutlineKind, OutlineNode, Source } from "@/lib/types";
 import { NODE_STATUSES, NODE_TYPES, NUMBERING_STYLES } from "@/lib/types";
+import { api } from "@/lib/client";
 import {
   ancestorIds,
   childrenOf,
@@ -31,16 +32,23 @@ import { isMod, shortcutLabel } from "@/lib/keys";
 import { NODE_TYPE_DEFS, nodeText, STATUS_LABELS } from "@/lib/fields";
 import { useHistory } from "./useHistory";
 import { useAutosave } from "./useAutosave";
-import { TreeRow, type DropWhere, type RowHandlers } from "./TreeRow";
+import { TreeRow, type DropWhere, type RowBadges, type RowHandlers } from "./TreeRow";
 import { SidePanel } from "./SidePanel";
 import { CommandPalette, type PaletteItem } from "./CommandPalette";
+import { NodePicker } from "./NodePicker";
+import { MoveToDialog } from "./MoveToDialog";
+import type { AttachmentActions } from "./PanelSections";
 
 type OutlineSummary = { id: string; name: string; kind: OutlineKind };
 
 type Props = {
   bundle: OutlineBundle;
   outlines: OutlineSummary[];
+  /** Node to reveal and select on load (from ?node= in the URL) */
+  initialNodeId: string | null;
 };
+
+const NO_BADGES: RowBadges = { links: 0, sources: 0, images: 0 };
 
 const NUMBERING_LABELS: Record<NumberingStyle, string> = { legal: "Legal (I. A. 1.)", decimal: "Decimal (1.1.1)", bullets: "Bullets" };
 const STATUS_ORDER: NodeStatus[] = ["empty", "skeleton", "drafted", "final"];
@@ -71,13 +79,22 @@ function toMap(nodes: OutlineNode[]): NodeMap {
   return map;
 }
 
-export function Editor({ bundle, outlines }: Props) {
+export function Editor({ bundle, outlines, initialNodeId }: Props) {
   const router = useRouter();
   const outlineId = bundle.outline.id;
   const initialMap = useMemo(() => toMap(bundle.nodes), [bundle.nodes]);
   const history = useHistory<NodeMap>(initialMap);
   const nodes = history.present;
   const autosave = useAutosave(outlineId, initialMap, nodes);
+
+  // Links, sources and images are saved straight away through their own routes (not part of undo).
+  const [links, setLinks] = useState<LinkRow[]>(bundle.links);
+  const [sources, setSources] = useState<Source[]>(bundle.sources);
+  const [images, setImages] = useState<ImageRow[]>(bundle.images);
+  const [moveTarget, setMoveTarget] = useState<string | null>(null);
+  const [linkFrom, setLinkFrom] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [outline, setOutline] = useState(bundle.outline);
   const numbering = outline.numbering;
@@ -115,6 +132,19 @@ export function Editor({ bundle, outlines }: Props) {
   }, [nodes, search, allRows]);
 
   const depth = useMemo(() => maxDepth(nodes), [nodes]);
+
+  // Per-row counts shown as small badges.
+  const badges = useMemo(() => {
+    const map: Record<string, RowBadges> = {};
+    const get = (id: string) => (map[id] ??= { links: 0, sources: 0, images: 0 });
+    for (const l of links) {
+      get(l.fromNode).links++;
+      get(l.toNode).links++;
+    }
+    for (const s of sources) get(s.nodeId).sources++;
+    for (const i of images) get(i.nodeId).images++;
+    return map;
+  }, [links, sources, images]);
 
   // Latest state for the stable handlers (updated after every render, read only from events and effects).
   const latest = useRef({ nodes, rows, selected, active, skeleton });
@@ -248,8 +278,17 @@ export function Editor({ bundle, outlines }: Props) {
       if (ids.length === 0) return;
       const firstIndex = Math.min(...ids.map((id) => visible.findIndex((r) => r.node.id === id)).filter((i) => i >= 0));
       let next = cur;
-      for (const id of ids) next = removeSubtree(next, id).nodes;
+      const gone = new Set<string>();
+      for (const id of ids) {
+        const r = removeSubtree(next, id);
+        next = r.nodes;
+        for (const g of r.removed) gone.add(g);
+      }
       commit(next);
+      // The server cascades links, sources and images; drop them here too.
+      setLinks((ls) => ls.filter((l) => !gone.has(l.fromNode) && !gone.has(l.toNode)));
+      setSources((ss) => ss.filter((s) => !gone.has(s.nodeId)));
+      setImages((is) => is.filter((i) => !gone.has(i.nodeId)));
       // Focus the row above the first deleted one, else the first remaining row.
       const remaining = flatten(next, true);
       const candidate = remaining.filter((r) => firstIndex < 0 || visible.findIndex((v) => v.node.id === r.node.id) < firstIndex).pop() ?? remaining[0];
@@ -382,6 +421,129 @@ export function Editor({ bundle, outlines }: Props) {
     history.redo();
   }, [history]);
 
+  const flash = useCallback((message: string) => {
+    setNotice(message);
+    setTimeout(() => setNotice((n) => (n === message ? null : n)), 4000);
+  }, []);
+
+  // ---- links, sources, images (saved through their own routes) --------------------------------------
+
+  const uploadImages = useCallback(
+    async (nodeId: string, files: File[]) => {
+      for (const file of files) {
+        if (!file.type.startsWith("image/")) continue;
+        const form = new FormData();
+        form.append("file", file, file.name || "pasted.png");
+        form.append("nodeId", nodeId);
+        try {
+          const img = await api.upload<ImageRow>("/api/upload", form);
+          setImages((is) => [...is, img]);
+        } catch (e) {
+          flash(`Upload failed: ${(e as Error).message}`);
+        }
+      }
+    },
+    [flash],
+  );
+
+  const actions = useMemo<AttachmentActions>(
+    () => ({
+      addLink: async (from, to, kind, note) => {
+        const link = await api.post<LinkRow>("/api/links", { fromNode: from, toNode: to, kind, note });
+        setLinks((ls) => [...ls, link]);
+      },
+      updateLink: async (id, patch) => {
+        const link = await api.patch<LinkRow>(`/api/links/${id}`, patch);
+        setLinks((ls) => ls.map((l) => (l.id === id ? link : l)));
+      },
+      removeLink: async (id) => {
+        await api.delete(`/api/links/${id}`);
+        setLinks((ls) => ls.filter((l) => l.id !== id));
+      },
+      addSource: async (nodeId, kind, reference, url) => {
+        const source = await api.post<Source>("/api/sources", { nodeId, kind, reference, url });
+        setSources((ss) => [...ss, source]);
+      },
+      updateSource: async (id, patch) => {
+        const source = await api.patch<Source>(`/api/sources/${id}`, patch);
+        setSources((ss) => ss.map((s) => (s.id === id ? source : s)));
+      },
+      removeSource: async (id) => {
+        await api.delete(`/api/sources/${id}`);
+        setSources((ss) => ss.filter((s) => s.id !== id));
+      },
+      uploadImages,
+      updateImage: async (id, patch) => {
+        const img = await api.patch<ImageRow>(`/api/images/${id}`, patch);
+        setImages((is) => is.map((i) => (i.id === id ? img : i)));
+      },
+      removeImage: async (id) => {
+        await api.delete(`/api/images/${id}`);
+        setImages((is) => is.filter((i) => i.id !== id));
+      },
+      jumpTo,
+      openLinkPicker: (fromId) => setLinkFrom(fromId),
+    }),
+    [jumpTo, uploadImages],
+  );
+
+  /** Move a node with its subtree to another outline (or elsewhere in this one). */
+  const moveTo = useCallback(
+    async (nodeId: string, targetOutlineId: string, parentId: string | null) => {
+      setMoveTarget(null);
+      const cur = latest.current.nodes;
+      const node = cur[nodeId];
+      if (!node) return;
+      if (targetOutlineId === outlineId) {
+        const next = moveSubtree(cur, nodeId, parentId, parentId === null ? childrenOf(cur, null).length : childrenOf(cur, parentId).length);
+        if (next) {
+          commit(next);
+          requestFocus(nodeId);
+        } else flash("Cannot move a node inside itself.");
+        return;
+      }
+      await autosave.saveNow();
+      try {
+        await api.post("/api/nodes/move", { nodeId, outlineId: targetOutlineId, parentId });
+      } catch (e) {
+        flash(`Move failed: ${(e as Error).message}`);
+        return;
+      }
+      const removed = removeSubtree(cur, nodeId);
+      history.replace(removed.nodes);
+      const target = outlines.find((o) => o.id === targetOutlineId);
+      flash(`Moved "${node.title || "(untitled)"}" to ${target?.name ?? "the other outline"}.`);
+      const remaining = flatten(removed.nodes, true);
+      if (remaining[0]) selectOnly(remaining[0].node.id);
+      else {
+        setSelected(new Set());
+        setActive(null);
+      }
+    },
+    [autosave, commit, flash, history, outlineId, outlines, requestFocus, selectOnly],
+  );
+
+  // Pasting an image anywhere in the editor attaches it to the active node.
+  useEffect(() => {
+    const onPaste = (e: ClipboardEvent) => {
+      const files = Array.from(e.clipboardData?.files ?? []).filter((f) => f.type.startsWith("image/"));
+      if (!files.length) return;
+      const act = latest.current.active;
+      if (!act) return;
+      e.preventDefault();
+      void uploadImages(act, files);
+    };
+    document.addEventListener("paste", onPaste);
+    return () => document.removeEventListener("paste", onPaste);
+  }, [uploadImages]);
+
+  // Open on the node named in the URL (from the inbox or a link).
+  useEffect(() => {
+    if (!initialNodeId) return;
+    const t = setTimeout(() => jumpTo(initialNodeId), 0);
+    return () => clearTimeout(t);
+  }, [initialNodeId, jumpTo]);
+
   // ---- keyboard ---------------------------------------------------------------------------------------
 
   const handleKey = useCallback(
@@ -471,6 +633,10 @@ export function Editor({ bundle, outlines }: Props) {
         },
         shortcutLabel("Mod+E"),
       );
+      cmd("move-to", "Move to another outline…", () => setMoveTarget(act));
+      cmd("link", "Add a link to another node…", () => setLinkFrom(act));
+      cmd("source", "Add a source", () => void actions.addSource(act, "casebook", "", null).then(() => setPanelOpen(true)));
+      cmd("image", "Attach an image…", () => fileInputRef.current?.click());
       for (const s of NODE_STATUSES) cmd(`status:${s}`, `Set status: ${STATUS_LABELS[s]}`, () => setStatusFor(selectionIds(act), s));
       for (const t of NODE_TYPES) cmd(`type:${t}`, `Change type to: ${NODE_TYPE_DEFS[t].label}`, () => setTypeFor(selectionIds(act), t));
     } else {
@@ -501,6 +667,7 @@ export function Editor({ bundle, outlines }: Props) {
     }));
     return [...cmds, ...nodeItems];
   }, [
+    actions,
     addChild,
     addSibling,
     addTopLevel,
@@ -655,12 +822,16 @@ export function Editor({ bundle, outlines }: Props) {
         setDrag(null);
         setDropTarget(null);
       },
+      onFileDrop: (id, files) => {
+        selectOnly(id);
+        void uploadImages(id, files);
+      },
       registerInput: (id, el) => {
         if (el) inputs.current.set(id, el);
         else inputs.current.delete(id);
       },
     }),
-    [commit, handleKey, selectOnly, selectionIds, setStatusFor, toggleCollapse, topLevelSelection, updateNode],
+    [commit, handleKey, selectOnly, selectionIds, setStatusFor, toggleCollapse, topLevelSelection, updateNode, uploadImages],
   );
 
   // ---- render -----------------------------------------------------------------------------------------
@@ -748,6 +919,7 @@ export function Editor({ bundle, outlines }: Props) {
           ?
         </button>
         <span className="ml-auto text-xs text-gray-500">{allRows.length} nodes</span>
+        {notice && <span className="text-xs text-amber-700">{notice}</span>}
         <span className={`text-xs ${saveColor}`} title={autosave.error ?? (autosave.savedAt ? `Last saved ${new Date(autosave.savedAt).toLocaleTimeString()}` : "")}>
           {saveLabel}
         </span>
@@ -812,6 +984,7 @@ export function Editor({ bundle, outlines }: Props) {
                 skeleton={skeleton}
                 dropWhere={dropTarget?.id === r.node.id ? dropTarget.where : null}
                 dimmed={drag?.includes(r.node.id) ?? false}
+                badges={badges[r.node.id] ?? NO_BADGES}
                 handlers={handlers}
               />
             ))
@@ -829,11 +1002,17 @@ export function Editor({ bundle, outlines }: Props) {
             <SidePanel
               node={activeNode}
               nodes={allRows.map((r) => r.node)}
+              nodesById={nodes}
+              links={links}
+              sources={sources}
+              images={images}
+              actions={actions}
               skeleton={skeleton}
               topicSuggestions={bundle.course.syllabusTopics}
               onPatch={updateNode}
               onField={setField}
               onRetype={(id, type) => setTypeFor([id], type)}
+              onMoveTo={(id) => setMoveTarget(id)}
               onEscape={() => {
                 if (latest.current.active) requestFocus(latest.current.active);
               }}
@@ -844,7 +1023,52 @@ export function Editor({ bundle, outlines }: Props) {
         )}
       </div>
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          const act = latest.current.active;
+          const files = Array.from(e.target.files ?? []);
+          e.target.value = "";
+          if (act && files.length) {
+            setPanelOpen(true);
+            void uploadImages(act, files);
+          }
+        }}
+      />
+
       <CommandPalette key={palette.session} open={palette.open} items={palette.items} onClose={closePalette} />
+
+      {moveTarget && nodes[moveTarget] && (
+        <MoveToDialog
+          open
+          nodeTitle={nodes[moveTarget].title}
+          outlines={outlines}
+          currentOutlineId={outlineId}
+          currentItems={allRows.filter((r) => r.node.id !== moveTarget && !ancestorIds(nodes, r.node.id).includes(moveTarget)).map((r) => ({ id: r.node.id, title: r.node.title, type: r.node.type, depth: r.depth }))}
+          onClose={() => setMoveTarget(null)}
+          onPick={(targetOutline, parentId) => void moveTo(moveTarget, targetOutline, parentId)}
+        />
+      )}
+
+      {linkFrom && nodes[linkFrom] && (
+        <NodePicker
+          open
+          title={`Link "${nodes[linkFrom].title || "(untitled)"}" to…`}
+          items={allRows.filter((r) => r.node.id !== linkFrom).map((r) => ({ id: r.node.id, title: r.node.title, type: r.node.type, depth: r.depth }))}
+          onClose={() => setLinkFrom(null)}
+          onPick={(toId) => {
+            const from = linkFrom;
+            setLinkFrom(null);
+            if (!toId) return;
+            setPanelOpen(true);
+            void actions.addLink(from, toId, "see also" as LinkKind, "").catch((e: Error) => flash(`Link failed: ${e.message}`));
+          }}
+        />
+      )}
 
       {helpOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20" onMouseDown={() => setHelpOpen(false)}>

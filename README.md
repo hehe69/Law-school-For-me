@@ -8,12 +8,12 @@ summarises or fills sections for you.
 No AI features, no accounts, no hosting. Everything lives in a SQLite
 database and an uploads folder on your Mac.
 
-> Build status: **phase 1 of 6** is done (data model, courses and outlines,
-> the tree editor with numbering, keyboard, drag and drop, status, skeleton
-> mode, autosave and undo, and a sample course). Phases 2–6 add node fields
-> and links, the syllabus and imports, exam-day views, drills and progress,
-> and printing, exports, snapshots, backups and the packaged Mac app. This
-> README grows with each phase.
+> Build status: **phases 1 and 2 of 6** are done (data model, courses and
+> outlines, the tree editor, node fields in the side panel, images, links
+> and backlinks, sources, tags, the scratch outline with "move to", and the
+> capture box with the inbox). Phases 3–6 add the syllabus and imports,
+> exam-day views, drills and progress, and printing, exports, snapshots,
+> backups and the packaged Mac app. This README grows with each phase.
 
 ## Run it
 
@@ -64,6 +64,39 @@ else (the Mac app sets it for you).
 
 On Windows or Linux, Ctrl replaces ⌘. The "?" button in the toolbar shows
 the same list.
+
+## The editor
+
+- **Tree**: every row shows its number, a status dot (grey empty, hollow
+  skeleton, blue drafted, green final; click it to cycle), a type badge, the
+  title, a one-line summary from the node's fields, small badges for links
+  (⇄), sources (§) and images (▣), and up to three tags. Drag the number to
+  move a row: the top third drops before, the bottom third after, the middle
+  makes it a child.
+- **Side panel**: the title, type, status, tags, the typed fields of the
+  type, a markdown notes body with a preview toggle, attached images (with
+  caption and a width slider), links with their backlinks, and sources.
+  Changing the type keeps any fields the new type also has.
+- **Skeleton mode** (toolbar toggle, remembered per outline): the tree shows
+  titles only and new nodes start with the "skeleton" status, for building
+  the structure from a syllabus before filling anything in.
+- **Numbering** is per outline: legal (I. A. 1. a. i. (1) (a) (i)), decimal
+  (1. 1.1 1.1.1) or bullets.
+- **Images**: paste an image anywhere in the editor to attach it to the
+  selected node, drop one on a row, or use "Add image" in the panel. Files
+  go to `uploads/<course-slug>/` and are served from `/files/…`.
+- **Links**: "Add link" picks another node and a kind (see also, conflicts
+  with, exception to, modifies, applies, leads to). Both ends show a chip;
+  clicking jumps to the other node.
+- **Scratch outline**: every course has one, a loose bullet list for things
+  not yet placed. "Move to…" in the panel (or the palette) sends a node with
+  its children into any outline of the course under a chosen parent.
+- **Capture and inbox**: the box in the header saves a line to the chosen
+  course's inbox with the date. The inbox page files each capture as a node
+  (pick type, status, outline and parent) and opens the editor on it.
+- Everything autosaves a moment after each change ("Saved" in the toolbar);
+  ⌘S saves at once. Undo covers tree and field edits; links, sources and
+  images save immediately and are not undoable.
 
 ## Data model
 

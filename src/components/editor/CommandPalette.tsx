@@ -21,16 +21,17 @@ type Props = {
   onClose: () => void;
 };
 
-/** 0 = the title starts with the query, 1 = the title contains every word, 2 = only the detail matches, -1 = no match. */
+/** 0 = exact title, 1 = the title starts with the query, 2 = the title contains every word, 3 = only the detail matches, -1 = no match. */
 function score(query: string, item: PaletteItem): number {
   const q = query.trim().toLowerCase();
-  if (!q) return 1;
+  if (!q) return 2;
   const title = (item.keywords ?? item.label).toLowerCase();
   const words = q.split(/\s+/);
-  if (title.startsWith(q)) return 0;
-  if (words.every((w) => title.includes(w))) return 1;
+  if (title === q) return 0;
+  if (title.startsWith(q)) return 1;
+  if (words.every((w) => title.includes(w))) return 2;
   const all = `${item.label} ${item.detail ?? ""}`.toLowerCase();
-  if (words.every((w) => all.includes(w))) return 2;
+  if (words.every((w) => all.includes(w))) return 3;
   return -1;
 }
 
