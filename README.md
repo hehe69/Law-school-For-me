@@ -8,12 +8,13 @@ summarises or fills sections for you.
 No AI features, no accounts, no hosting. Everything lives in a SQLite
 database and an uploads folder on your Mac.
 
-> Build status: **phases 1 to 3 of 6** are done (data model, courses and
+> Build status: **phases 1 to 4 of 6** are done (data model, courses and
 > outlines, the tree editor, node fields in the side panel, images, links
 > and backlinks, sources, tags, the scratch outline with "move to", the
 > capture box with the inbox, the syllabus PDF pane, study-app import with
-> linked nodes, .docx / .md import, and the comparison pane). Phases 4–6
-> add exam-day views, drills and progress, and printing, exports,
+> linked nodes, .docx / .md import, the comparison pane, attack outlines,
+> the issue checklist, exam mode, flowcharts, the glossary and reading
+> mode). Phases 5 and 6 add drills and progress, and printing, exports,
 > snapshots, backups and the packaged Mac app. This README grows with each
 > phase.
 
@@ -150,6 +151,47 @@ rule, case and class notes.
 - **Compare…** in the editor toolbar loads a friend's .docx or .md outline
   into a read-only pane beside the tree, with a filter box. It is never
   saved or merged.
+
+## Views
+
+The editor's **Views ▾** menu and the course page link to these. Every
+document view renders nodes the same way: number, title, the typed fields
+(elements as a numbered list, holdings, hypo answers folded away, tables,
+flags as chips), the notes, attached images with captions, and sources in a
+compact line under the node.
+
+- **Attack outline** (Views → Generate attack outline…, from a full
+  outline): options are titles only or titles plus rule statements and
+  elements, the top N levels, only nodes with chosen tags (ancestors come
+  along for structure), and only "final" nodes. The result is a separate
+  editable outline of kind "attack"; each line remembers its source node.
+  **Regenerate from source** (Views menu in the attack outline) keeps your
+  edited lines where the source is unchanged, rewrites untouched lines
+  whose source changed, adds lines for new sources, and flags lines whose
+  source changed or disappeared (⚠ in the tree; the panel offers "Update
+  from source" or "Keep mine").
+- **Issue checklist**: every heading and rule as a tickable list grouped by
+  top-level section. Ticks are kept in the browser per outline (Reset
+  clears them); Print lays it out in two columns on one sheet.
+- **Exam mode**: the whole outline as a large read-only document over the
+  full screen (the Full screen button uses the browser's own full screen).
+  Instant search with a results list, ⌘K to jump to any node, up to five
+  sections pinned in the sidebar (remembered per outline), a split view
+  with any second section, "Only" to show one section, and a dark / light
+  toggle remembered in the browser.
+- **Flowchart** (Views → Flowchart for the selected branch, or the
+  course's Flowcharts page to pick a rule): a rule drawn as a decision
+  tree: the elements in order with a "no" branch for each, the exceptions
+  that defeat an element, the Wisconsin variation attached to the element
+  it changes, and hypos hanging off the element they test (a hypo under an
+  element node, linked to it, or whose "turns on" names it). Export SVG,
+  Export PNG, Print.
+- **Glossary**: every definition node of the course, alphabetised, linking
+  back to the node. Wherever the outline is rendered as a document, defined
+  terms get a dotted underline with the definition as a hover tooltip.
+- **Reading mode**: one branch at a time as a clean document in large type,
+  with previous / next branch, the parent, and the outline's sections in a
+  sidebar.
 
 ## Data model
 

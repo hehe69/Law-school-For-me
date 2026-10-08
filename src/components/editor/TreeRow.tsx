@@ -137,6 +137,11 @@ function RowImpl({ node, depth, label, hasChildren, selected, active, skeleton, 
             {summary}
           </span>
         )}
+        {typeof node.fields.attackFlag === "string" && (
+          <span className="shrink-0 rounded bg-red-100 px-1 text-[10px] leading-4 text-red-700" title="The full-outline node this line came from changed; open the panel to update or keep your line">
+            ⚠ {node.fields.attackFlag}
+          </span>
+        )}
         {(badges.links > 0 || badges.sources > 0 || badges.images > 0 || node.linkedNotePath) && !skeleton && (
           <span className="flex shrink-0 gap-1 font-mono text-[10px] leading-5 text-gray-400">
             {badges.links > 0 && <span title={`${badges.links} link${badges.links === 1 ? "" : "s"}`}>⇄{badges.links}</span>}

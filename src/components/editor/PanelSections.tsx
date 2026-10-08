@@ -20,7 +20,49 @@ export type AttachmentActions = {
   openLinkPicker: (fromId: string) => void;
   /** Re-read the study-app note this node was imported from */
   refreshFromNote: (id: string) => Promise<void>;
+  /** Overwrite an attack line from its full-outline source */
+  refreshAttackLine: (id: string) => Promise<void>;
 };
+
+export function AttackLineSection({ node, actions, onKeep }: { node: OutlineNode; actions: AttachmentActions; onKeep: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  if (!node.sourceNodeId) return null;
+  const flag = typeof node.fields.attackFlag === "string" ? node.fields.attackFlag : null;
+  return (
+    <div className={`mt-3 rounded border p-2 text-xs ${flag ? "border-red-200 bg-red-50" : "border-gray-200 bg-white"}`}>
+      <div className="text-gray-700">
+        Attack line from the full outline.{flag ? ` ⚠ ${flag === "source removed" ? "Its source node was removed or is no longer selected." : "Its source node changed since this line was generated."}` : " In step with its source."}
+      </div>
+      <div className="mt-1 flex items-center gap-2">
+        {flag !== "source removed" && (
+          <button
+            type="button"
+            className="btn py-0 text-xs"
+            disabled={busy}
+            onClick={() => {
+              setBusy(true);
+              setMessage(null);
+              actions
+                .refreshAttackLine(node.id)
+                .then(() => setMessage("Updated from the source."))
+                .catch((e: Error) => setMessage(e.message))
+                .finally(() => setBusy(false));
+            }}
+          >
+            {busy ? "Updating…" : "Update from source"}
+          </button>
+        )}
+        {flag && (
+          <button type="button" className="text-gray-500 hover:text-gray-900" onClick={onKeep} title="Keep this line as it is and clear the flag">
+            Keep mine
+          </button>
+        )}
+        {message && <span className="text-gray-600">{message}</span>}
+      </div>
+    </div>
+  );
+}
 
 export function LinkedNoteSection({ node, actions, onUnlink }: { node: OutlineNode; actions: AttachmentActions; onUnlink: () => void }) {
   const [busy, setBusy] = useState(false);

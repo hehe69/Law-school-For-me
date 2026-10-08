@@ -497,6 +497,11 @@ export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPa
         const cur = latest.current.nodes;
         if (cur[id]) replaceNodes({ ...cur, [id]: { ...cur[id], ...fresh, collapsed: cur[id].collapsed } });
       },
+      refreshAttackLine: async (id) => {
+        const fresh = await api.post<OutlineNode>(`/api/nodes/${id}/attack-refresh`, {});
+        const cur = latest.current.nodes;
+        if (cur[id]) replaceNodes({ ...cur, [id]: { ...cur[id], ...fresh, collapsed: cur[id].collapsed } });
+      },
     }),
     [replaceNodes, jumpTo, uploadImages],
   );
@@ -564,6 +569,21 @@ export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPa
   );
 
   const openCompareFile = useCallback(() => compareInputRef.current?.click(), []);
+
+  const base = `/courses/${bundle.course.slug}/outlines/${outlineId}`;
+  const isAttack = bundle.outline.kind === "attack" && !!bundle.outline.sourceOutlineId;
+
+  /** Attack outlines: pull in changes from the full outline, then reload with the merged result. */
+  const regenerate = useCallback(async () => {
+    await autosave.saveNow();
+    try {
+      const r = await api.post<{ added: number; updated: number; flaggedChanged: number; flaggedRemoved: number; kept: number }>(`/api/outlines/${outlineId}/regenerate`, {});
+      window.alert(`Regenerated: ${r.added} added, ${r.updated} updated from the source, ${r.flaggedChanged} flagged as changed, ${r.flaggedRemoved} flagged as removed, ${r.kept} kept.`);
+      window.location.reload();
+    } catch (e) {
+      flash(`Regenerate failed: ${(e as Error).message}`);
+    }
+  }, [autosave, flash, outlineId]);
   const loadCompareFile = useCallback(
     async (file: File) => {
       const form = new FormData();
@@ -749,6 +769,14 @@ export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPa
     else cmd("syllabus-page", "Upload a syllabus PDF", () => router.push(`/courses/${bundle.course.slug}/syllabus`));
     cmd("compare", "Compare with a friend's outline file…", openCompareFile);
     cmd("check-notes", "Check linked study-app notes for changes", () => router.push(`/courses/${bundle.course.slug}/import`));
+    cmd("exam", "Exam mode", () => router.push(`${base}/exam`));
+    cmd("checklist", "Issue checklist", () => router.push(`${base}/checklist`));
+    const readTarget = act ?? childrenOf(cur, null)[0]?.id;
+    if (readTarget) cmd("read", "Reading mode", () => router.push(`${base}/read/${readTarget}`));
+    cmd("flowchart", act ? "Flowchart of this branch" : "Flowcharts", () => router.push(act ? `${base}/flowchart/${act}` : `${base}/flowchart`));
+    cmd("glossary", "Glossary", () => router.push(`/courses/${bundle.course.slug}/glossary`));
+    if (isAttack) cmd("regenerate", "Regenerate this attack outline from its source", () => void regenerate());
+    else if (bundle.outline.kind === "full") cmd("attack", "Generate an attack outline…", () => router.push(`${base}/attack`));
     cmd("close-pane", "Close the left pane", () => setPane({ kind: "none" }));
     cmd("course", "Back to the course page", () => router.push(`/courses/${bundle.course.slug}`));
 
@@ -770,10 +798,13 @@ export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPa
     addSibling,
     addTopLevel,
     autosave,
+    base,
     bundle.course.slug,
+    bundle.outline.kind,
     deleteIds,
     expandElements,
     flash,
+    isAttack,
     replaceNodes,
     indentSelection,
     jumpTo,
@@ -783,6 +814,7 @@ export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPa
     outdentSelection,
     patchOutline,
     redo,
+    regenerate,
     router,
     selectionIds,
     setStatusFor,
@@ -1038,6 +1070,39 @@ export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPa
         <button type="button" className={`btn ${pane.kind === "compare" ? "border-blue-500 bg-blue-50" : ""}`} onClick={openCompareFile} title="Load a friend's outline (.docx or .md) in a read-only pane">
           Compare…
         </button>
+        <details className="relative">
+          <summary className="btn cursor-pointer list-none">Views ▾</summary>
+          <div className="absolute left-0 top-full z-30 mt-1 flex w-56 flex-col rounded border border-gray-200 bg-white py-1 text-sm shadow-lg">
+            <Link href={`${base}/exam`} className="px-3 py-1 hover:bg-gray-50">
+              Exam mode
+            </Link>
+            <Link href={`${base}/checklist`} className="px-3 py-1 hover:bg-gray-50">
+              Issue checklist
+            </Link>
+            {allRows.length > 0 ? (
+              <Link href={`${base}/read/${active ?? allRows[0].node.id}`} className="px-3 py-1 hover:bg-gray-50">
+                Reading mode{active ? " (this branch)" : ""}
+              </Link>
+            ) : (
+              <span className="px-3 py-1 text-gray-400">Reading mode (empty outline)</span>
+            )}
+            <Link href={active ? `${base}/flowchart/${active}` : `${base}/flowchart`} className="px-3 py-1 hover:bg-gray-50">
+              Flowchart{active ? " (this branch)" : "s"}
+            </Link>
+            <Link href={`/courses/${bundle.course.slug}/glossary`} className="px-3 py-1 hover:bg-gray-50">
+              Glossary
+            </Link>
+            {isAttack ? (
+              <button type="button" className="px-3 py-1 text-left hover:bg-gray-50" onClick={() => void regenerate()}>
+                Regenerate from source
+              </button>
+            ) : bundle.outline.kind === "full" ? (
+              <Link href={`${base}/attack`} className="px-3 py-1 hover:bg-gray-50">
+                Generate attack outline…
+              </Link>
+            ) : null}
+          </div>
+        </details>
         <input
           ref={compareInputRef}
           type="file"

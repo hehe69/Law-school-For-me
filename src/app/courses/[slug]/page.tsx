@@ -13,6 +13,7 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
   const course = getCourseBySlug(db, slug);
   if (!course) notFound();
   const outlines = listOutlines(db, course.id);
+  const main = outlines.find((o) => o.isDefault && o.kind === "full") ?? outlines.find((o) => o.kind === "full") ?? null;
   const nodeCounts = Object.fromEntries(
     outlines.map((o) => [o.id, (db.prepare("SELECT COUNT(*) AS n FROM nodes WHERE outline_id = ?").get(o.id) as { n: number }).n]),
   ) as Record<string, number>;
@@ -41,6 +42,25 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
         <Link href={`/courses/${course.slug}/inbox`} className="btn">
           Inbox
         </Link>
+        <Link href={`/courses/${course.slug}/glossary`} className="btn">
+          Glossary
+        </Link>
+        {main && (
+          <>
+            <Link href={`/courses/${course.slug}/outlines/${main.id}/exam`} className="btn">
+              Exam mode
+            </Link>
+            <Link href={`/courses/${course.slug}/outlines/${main.id}/checklist`} className="btn">
+              Issue checklist
+            </Link>
+            <Link href={`/courses/${course.slug}/outlines/${main.id}/flowchart`} className="btn">
+              Flowcharts
+            </Link>
+            <Link href={`/courses/${course.slug}/outlines/${main.id}/attack`} className="btn">
+              Attack outline
+            </Link>
+          </>
+        )}
       </nav>
 
       <section className="mt-6">

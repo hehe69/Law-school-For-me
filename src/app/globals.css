@@ -80,6 +80,200 @@ body {
   user-select: none;
 }
 
+/* Documents: reading mode, exam mode, print. */
+.doc {
+  max-width: 72rem;
+}
+.doc-large {
+  font-size: 1.1rem;
+  line-height: 1.6;
+}
+.doc-node {
+  margin-top: 0.9rem;
+  scroll-margin-top: 4rem;
+}
+.doc-title {
+  font-weight: 600;
+  line-height: 1.3;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.doc-depth-0 .doc-title {
+  font-size: 1.45em;
+  margin-top: 0.6rem;
+  border-bottom: 1px solid #e5e7eb;
+  padding-bottom: 0.2rem;
+}
+.doc-depth-1 .doc-title {
+  font-size: 1.2em;
+}
+.doc-depth-2 .doc-title {
+  font-size: 1.05em;
+}
+.doc-depth-3 .doc-title,
+.doc-depth-4 .doc-title,
+.doc-depth-5 .doc-title {
+  font-size: 1em;
+  font-weight: 500;
+}
+.doc-num {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-weight: 500;
+  color: #4b5563;
+  font-size: 0.85em;
+  min-width: 2.2em;
+}
+.doc-type {
+  font-size: 0.65em;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #6b7280;
+  border: 1px solid #d1d5db;
+  border-radius: 3px;
+  padding: 0 0.35em;
+}
+.doc-tools {
+  margin-left: auto;
+  font-size: 0.6em;
+  font-weight: 400;
+}
+.doc-block {
+  margin: 0.3rem 0 0.3rem 2.6em;
+}
+.doc-body {
+  margin: 0.3rem 0 0.3rem 2.6em;
+}
+.doc-label {
+  font-weight: 600;
+  color: #374151;
+}
+.doc-sub {
+  color: #6b7280;
+}
+.inline-md > :first-child {
+  display: inline;
+}
+.inline-md :is(p) {
+  margin: 0;
+}
+.doc-table {
+  border-collapse: collapse;
+  font-size: 0.9em;
+}
+.doc-table th,
+.doc-table td {
+  border: 1px solid #d1d5db;
+  padding: 0.2em 0.5em;
+  text-align: left;
+  vertical-align: top;
+}
+.doc-table th {
+  background: #f3f4f6;
+}
+.doc-figure {
+  margin: 0.5rem 0 0.5rem 2.6em;
+}
+.doc-figure figcaption {
+  font-size: 0.85em;
+  color: #6b7280;
+}
+.doc-sources {
+  margin: 0.2rem 0 0.4rem 2.6em;
+  font-size: 0.8em;
+  color: #6b7280;
+}
+.doc-footnotes {
+  margin-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 0.5rem;
+  font-size: 0.85em;
+  color: #4b5563;
+  list-style: decimal;
+  padding-left: 1.5em;
+}
+.term {
+  text-decoration: underline dotted #6b7280;
+  text-underline-offset: 2px;
+  cursor: help;
+}
+
+/* Exam mode dark theme. */
+.exam-dark {
+  background: #0f1115;
+  color: #e5e7eb;
+}
+.exam-dark .doc-depth-0 .doc-title {
+  border-color: #374151;
+}
+.exam-dark :is(.doc-num, .doc-type, .doc-sub, .doc-sources, .doc-label, .doc-footnotes, .doc-figure figcaption) {
+  color: #9ca3af;
+}
+.exam-dark .doc-type {
+  border-color: #4b5563;
+}
+.exam-dark .doc-table th {
+  background: #1f2937;
+}
+.exam-dark .doc-table th,
+.exam-dark .doc-table td {
+  border-color: #4b5563;
+}
+.exam-dark .prose-outline blockquote {
+  border-color: #4b5563;
+  color: #d1d5db;
+}
+.exam-dark .prose-outline code {
+  background: #1f2937;
+}
+.exam-dark .prose-outline a {
+  color: #93c5fd;
+}
+.exam-dark .input {
+  background: #1f2937;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+.exam-dark .btn {
+  background: #1f2937;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+.exam-dark .btn:hover {
+  background: #374151;
+}
+.exam-hit {
+  animation: exam-flash 1.2s ease-out;
+}
+@keyframes exam-flash {
+  from {
+    background: rgba(250, 204, 21, 0.45);
+  }
+  to {
+    background: transparent;
+  }
+}
+
+/* Checklist and flowchart printing: the shell disappears, the content fills the page. */
+@media print {
+  header,
+  .print-hidden {
+    display: none !important;
+  }
+  .checklist-columns {
+    columns: 2;
+    column-gap: 2rem;
+  }
+  .checklist-group {
+    break-inside: avoid;
+  }
+  body {
+    font-size: 11px;
+  }
+}
+
 /* Markdown rendering inside the app (reading mode, panel previews). */
 .prose-outline :is(p, ul, ol, blockquote, pre, table) {
   margin: 0.4em 0;
