@@ -67,6 +67,15 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
             <Link href={`/courses/${course.slug}/outlines/${main.id}/drill`} className="btn">
               Drills
             </Link>
+            <Link href={`/courses/${course.slug}/outlines/${main.id}/print`} className="btn">
+              Print
+            </Link>
+            <Link href={`/courses/${course.slug}/outlines/${main.id}/export`} className="btn">
+              Export
+            </Link>
+            <Link href={`/courses/${course.slug}/outlines/${main.id}/snapshots`} className="btn">
+              Snapshots
+            </Link>
           </>
         )}
         <Link href={`/courses/${course.slug}/progress`} className="btn">

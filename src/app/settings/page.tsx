@@ -1,18 +1,38 @@
 import fs from "node:fs";
+import os from "node:os";
+import { headers } from "next/headers";
 import Link from "next/link";
 import { getDb } from "@/lib/db";
-import { getStudyContentDir } from "@/lib/settings";
+import { getStudyContentDir, readLauncherSettings } from "@/lib/settings";
 import { loadStudyTree } from "@/lib/studyapp";
-import { DATA_DIR, DEFAULT_STUDY_CONTENT_DIR } from "@/lib/paths";
+import { BACKUP_DIR, DATA_DIR, DEFAULT_STUDY_CONTENT_DIR, EXPORT_DIR } from "@/lib/paths";
 import { listCourses } from "@/lib/courses";
-import { saveSettingsAction } from "@/app/settings-actions";
+import { listBackups } from "@/lib/backup";
+import { backupNowAction, saveNetworkAction, saveSettingsAction } from "@/app/settings-actions";
 
-export default function SettingsPage() {
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(0)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
+}
+
+/** IPv4 addresses of this computer on its local networks, for the "same wifi" links. */
+function lanAddresses(): string[] {
+  return Object.values(os.networkInterfaces())
+    .flat()
+    .filter((i): i is os.NetworkInterfaceInfo => !!i && i.family === "IPv4" && !i.internal)
+    .map((i) => i.address);
+}
+
+export default async function SettingsPage() {
+  const port = ((await headers()).get("host") ?? "").split(":")[1] ?? process.env.PORT ?? "3000";
   const db = getDb();
   const study = getStudyContentDir(db);
   const exists = fs.existsSync(study.dir);
   const tree = exists ? loadStudyTree(study.dir) : null;
   const courses = listCourses(db);
+  const launcher = readLauncherSettings();
+  const backups = listBackups().slice(0, 8);
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-8">
@@ -85,13 +105,73 @@ export default function SettingsPage() {
         )}
       </section>
 
+      <section className="card mt-6">
+        <h2 className="text-base font-medium">Network access</h2>
+        <form action={saveNetworkAction} className="mt-2 text-sm">
+          <label className="flex items-start gap-2">
+            <input type="checkbox" name="networkAccess" defaultChecked={launcher.networkAccess} className="mt-1" />
+            <span>
+              Allow other devices on my wifi to open this app
+              <span className="block text-xs text-gray-500">
+                Off (the default): the app listens on this computer only. On: it listens on all interfaces, so a phone or laptop on the same wifi can open it at the address the launcher prints. Anyone on
+                that network can then open it; there is no login. Takes effect the next time the app starts.
+              </span>
+            </span>
+          </label>
+          <button type="submit" className="btn-primary mt-3">
+            Save
+          </button>
+          <span className="ml-3 text-xs text-gray-500">Currently: {launcher.networkAccess ? "on (after the next restart, if it was just changed)" : "off"}</span>
+        </form>
+        {launcher.networkAccess && (
+          <p className="mt-2 text-xs text-gray-600">
+            Same wifi:{" "}
+            {lanAddresses().length === 0
+              ? "no local network address found"
+              : lanAddresses().map((a, i) => (
+                  <span key={a} className="font-mono">
+                    {i > 0 ? " · " : ""}http://{a}:{port}
+                  </span>
+                ))}
+          </p>
+        )}
+      </section>
+
+      <section className="card mt-6">
+        <h2 className="text-base font-medium">Backups</h2>
+        <p className="mt-1 text-sm text-gray-600">
+          A backup is a zip of the database and the uploads folder in <span className="font-mono text-xs">{BACKUP_DIR}</span>. One is written automatically when the app starts and the newest backup is
+          over a day old. To restore, quit the app and put <span className="font-mono text-xs">outlines.db</span> and <span className="font-mono text-xs">uploads/</span> from the zip back into the data
+          folder.
+        </p>
+        <form action={backupNowAction} className="mt-3">
+          <button type="submit" className="btn-primary">
+            Back up now
+          </button>
+        </form>
+        {backups.length > 0 && (
+          <ul className="mt-3 text-xs text-gray-600">
+            {backups.map((b) => (
+              <li key={b.file} className="flex gap-3 py-0.5">
+                <span className="font-mono">{b.file}</span>
+                <span className="text-gray-400">{formatBytes(b.bytes)}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       <section className="card mt-6 text-sm">
         <h2 className="text-base font-medium">Where things live</h2>
         <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
           <dt className="text-gray-500">Database and uploads</dt>
           <dd className="font-mono">{DATA_DIR}</dd>
+          <dt className="text-gray-500">Exports</dt>
+          <dd className="font-mono">{EXPORT_DIR}</dd>
+          <dt className="text-gray-500">Backups</dt>
+          <dd className="font-mono">{BACKUP_DIR}</dd>
         </dl>
-        <p className="mt-2 text-xs text-gray-500">Set LAW_OUTLINES_DATA_DIR before starting the app to use another folder; the Mac app has a settings file for it.</p>
+        <p className="mt-2 text-xs text-gray-500">Set LAW_OUTLINES_DATA_DIR before starting the app to use another data folder; the Mac app has a settings file for it.</p>
       </section>
     </div>
   );

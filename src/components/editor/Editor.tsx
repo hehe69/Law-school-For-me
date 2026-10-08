@@ -1111,6 +1111,17 @@ export function Editor({ bundle, outlines, initialNodeId, syllabusUrl, initialPa
             <Link href={`/courses/${bundle.course.slug}/gaps`} className="px-3 py-1 hover:bg-gray-50">
               Gaps
             </Link>
+            <div className="my-1 border-t border-gray-100" />
+            <Link href={`${base}/print`} className="px-3 py-1 hover:bg-gray-50">
+              Print…
+            </Link>
+            <Link href={`${base}/export`} className="px-3 py-1 hover:bg-gray-50">
+              Export file…
+            </Link>
+            <Link href={`${base}/snapshots`} className="px-3 py-1 hover:bg-gray-50">
+              Snapshots and history
+            </Link>
+            <div className="my-1 border-t border-gray-100" />
             {isAttack ? (
               <button type="button" className="px-3 py-1 text-left hover:bg-gray-50" onClick={() => void regenerate()}>
                 Regenerate from source

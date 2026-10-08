@@ -8,17 +8,18 @@ summarises or fills sections for you.
 No AI features, no accounts, no hosting. Everything lives in a SQLite
 database and an uploads folder on your Mac.
 
-> Build status: **phases 1 to 5 of 6** are done (data model, courses and
-> outlines, the tree editor, node fields in the side panel, images, links
-> and backlinks, sources, tags, the scratch outline with "move to", the
-> capture box with the inbox, the syllabus PDF pane, study-app import with
-> linked nodes, .docx / .md import, the comparison pane, attack outlines,
-> the issue checklist, exam mode, flowcharts, the glossary, reading mode,
-> drills, progress, gaps, page-limit mode and flashcards). Phase 6 adds
-> printing, exports, snapshot diffs and restore, backups, the network
-> switch and the packaged Mac app. This README grows with each phase.
+Contents: [Run it in a browser](#run-it-in-a-browser) ·
+[The Mac app](#the-mac-app) · [Keyboard shortcuts](#keyboard-shortcuts-editor) ·
+[The editor](#the-editor) · [Syllabus](#syllabus) ·
+[Study-app import](#study-app-import) ·
+[Importing and comparing files](#importing-and-comparing-files) ·
+[Views](#views) · [Drills, progress, gaps, flashcards](#drills-progress-gaps-flashcards) ·
+[Printing](#printing) · [Exporting](#exporting) ·
+[Snapshots and history](#snapshots-and-history) · [Backups](#backups) ·
+[Network access](#network-access) · [Where files live](#where-files-live) ·
+[Data model](#data-model) · [Project layout](#project-layout)
 
-## Run it
+## Run it in a browser
 
 ```bash
 npm install
@@ -43,6 +44,129 @@ page once you have your own courses.
 Set `LAW_OUTLINES_DATA_DIR` to keep the database and uploads somewhere
 else (the Mac app sets it for you).
 
+## The Mac app
+
+The same app, packaged so it opens from Applications like anything else:
+double-click, and it starts its own server on your computer and opens a
+window. You build it yourself once (it is not signed with an Apple developer
+account, which is why macOS asks you to confirm the first open). The steps
+below assume you have used Terminal a handful of times; every command is
+typed into Terminal and finished with Return.
+
+### 1. One-time setup
+
+1. **Install Node.js.** Go to https://nodejs.org, download the installer
+   marked **LTS** (a `.pkg` file), open it and click through. This gives
+   Terminal the `node` and `npm` commands.
+2. **Install Apple's command line tools** (they include `git`). Open
+   Terminal (press ⌘ Space, type `Terminal`, press Return) and run:
+
+   ```bash
+   xcode-select --install
+   ```
+
+   Click **Install** in the window that appears and wait for it to finish.
+   If Terminal says the tools are already installed, that is fine.
+3. Close Terminal and open it again so it notices the new commands.
+
+### 2. Get the code
+
+```bash
+cd ~/Documents
+git clone --branch claude/awesome-davinci-un1w3e https://github.com/hehe69/Law-school-For-me.git law-outlines-app
+cd law-outlines-app
+```
+
+This puts the code in `~/Documents/law-outlines-app`. The outline app lives
+on its own branch of the repository (the study app is on another), so keep
+it in its own folder rather than inside the study app's checkout.
+
+### 3. Build the app
+
+```bash
+npm install
+npm run package
+```
+
+`npm install` downloads the dependencies (a few minutes the first time).
+`npm run package` builds the web app, checks that SQLite loads inside
+Electron (and rebuilds it if not), and packages everything. When it prints
+`Done`, the `dist` folder contains **Law Outlines.app** (inside
+`dist/mac-arm64` on an Apple-silicon Mac, `dist/mac` on an Intel Mac) and a
+`.dmg` with the same app.
+
+To give the app its own icon, put a 1024 by 1024 PNG at `assets/icon.png`
+before packaging; without one it uses Electron's icon.
+
+### 4. Install it
+
+1. Run `open dist` to show the folder in Finder, open `mac-arm64` (or
+   `mac`), and drag **Law Outlines** into **Applications**.
+2. Open it the first time:
+   - On macOS 14 (Sonoma) or earlier: right-click (or Control-click) the
+     app, choose **Open**, then **Open** again in the warning.
+   - On macOS 15 (Sequoia) or later: double-click it, dismiss the message
+     that it cannot be opened, then open **System Settings → Privacy &
+     Security**, scroll down to the line about Law Outlines, click **Open
+     Anyway** and confirm.
+
+   This is only needed once. Afterwards it opens normally.
+
+### 5. First launch
+
+The app asks you to confirm its data folder, `~/Documents/law-outlines`
+(use it, or choose another). That folder holds `outlines.db`, `uploads/`
+and `settings.json`, exactly as the browser version does, so the two can
+share one set of outlines (do not run both at the same time). The app's own
+settings (which data folder to use) are in
+`~/Library/Application Support/Law Outlines/settings.json`; the **Law
+Outlines** menu has **Open data folder** and **Open settings file**.
+
+The window is an ordinary browser view of the app. Print views open the
+system print dialog; links to outside websites open in your browser.
+
+### 6. Update to a newer version
+
+```bash
+cd ~/Documents/law-outlines-app
+git pull
+npm install
+npm run package
+```
+
+Quit the running app, drag the new **Law Outlines** from `dist/mac-arm64`
+(or `dist/mac`) into Applications and choose **Replace**. Your outlines are
+not inside the app (they are in `~/Documents/law-outlines`), so nothing is
+lost; still, take a backup first (**Settings → Back up now**) to be safe.
+
+### If something goes wrong
+
+- `zsh: command not found: npm` — Node.js is not installed, or Terminal was
+  open before you installed it. Install it (step 1) and open a new Terminal
+  window.
+- `npm install` mentions blocked install scripts, or `npm run package` says
+  Electron's binary is missing — run
+  `npm install-scripts approve electron` and then `npm install` again.
+  (`package.json` already approves the pinned versions; this is needed after
+  an upgrade of one of them. `npm run package` also fetches the Electron
+  binary itself when it is missing.)
+- Errors mentioning `xcrun`, `clang`, `node-gyp` or `python` — the command
+  line tools are missing. Run `xcode-select --install` and try again. They
+  are only needed when SQLite has to be rebuilt for Electron.
+- "Law Outlines cannot start" with a note about the port — another copy of
+  the app, or `npm run dev`, is already running. Quit it and open the app
+  again.
+- "Law Outlines cannot start" with a note about the data folder — the
+  folder is not writable. Fix its permissions, or point the app at another
+  folder by editing the settings file (**Law Outlines → Open settings
+  file**).
+- The window is blank or the app quits at once — start it from Terminal to
+  see the log:
+
+  ```bash
+  "/Applications/Law Outlines.app/Contents/MacOS/Law Outlines"
+  ```
+
 ## Keyboard shortcuts (editor)
 
 | Keys | What |
@@ -62,11 +186,13 @@ else (the Mac app sets it for you).
 | ⌘K | Command palette: jump to any node or run any command |
 | ⌘F | Search |
 | ⌘E | Edit the fields of the active node in the side panel |
+| ⌘S | Save now (everything autosaves anyway) |
+| ⌘⇧H | Turn the text selected in the syllabus pane into headings |
 | Esc | Back to the tree from any field |
 | Shift+click / ⌘click | Select a range / toggle a row |
 
 On Windows or Linux, Ctrl replaces ⌘. The "?" button in the toolbar shows
-the same list.
+the same list. On the print views, ⌘P prints.
 
 ## The editor
 
@@ -192,6 +318,8 @@ compact line under the node.
 - **Reading mode**: one branch at a time as a clean document in large type,
   with previous / next branch, the parent, and the outline's sections in a
   sidebar.
+- **Print…**, **Export file…** and **Snapshots and history** are described
+  in their own sections below.
 
 ## Drills, progress, gaps, flashcards
 
@@ -206,10 +334,8 @@ compact line under the node.
   for untested; hover the row for the counts.
 - **Progress** (per course, per outline): nodes, percent final, words and
   the estimated printed pages; counts and percent by status overall and per
-  top-level section; a word-count timeline over snapshots (a snapshot is
-  taken automatically once a day when you open an outline that changed,
-  and manual snapshots arrive in phase 6); stale sections with no edit in
-  14 or more days.
+  top-level section; a word-count timeline over snapshots; stale sections
+  with no edit in 14 or more days.
 - **Gaps**: syllabus topics with no node tagged with them, rules with no
   elements, headings with nothing under them, hypos with no answer, and
   rules, cases, statutes, elements, exceptions, policies and professor
@@ -228,37 +354,152 @@ compact line under the node.
   scheduling as the study app: Again, Hard, Good, Easy. Attack outlines
   never make cards.
 
+## Printing
+
+**Views → Print…** (or **Print** on the course page) opens the outline as a
+print document, then ⌘P or the **Print** button prints it or saves it as a
+PDF through the system dialog. The same page serves full outlines, attack
+outlines and single sections:
+
+- The toolbar at the top is not printed. It picks the **section** (whole
+  outline or any top-level section), how **sources** appear (inline under
+  each node, as numbered footnotes collected at the end, or left out), and
+  whether **hypo answers** are shown; a hidden answer prints as its label
+  only.
+- The full outline starts with a **table of contents** of the top two
+  levels, on its own page. A single section prints without one.
+- Page numbers sit at the bottom right of every page. (They come from the
+  CSS `@page` rule, which Chrome and the Mac app honour; Safari and Firefox
+  print the document without them.)
+- Nodes keep their title with their content across page breaks; images
+  print with their captions; defined terms lose their dotted underline.
+- The **issue checklist** prints in two columns, and a **flowchart** prints
+  on its own, both from their own Print buttons.
+
+## Exporting
+
+**Views → Export file…** (or **Export** on the course page) writes a file to
+`~/Documents/law-outlines-export/`, named
+`<course>-<outline>-<date>.docx`, `.pdf` or `.md` (a single section adds
+the section name). The page shows the full path when it is done. Options
+are the same as for printing: whole outline or one section, sources inline,
+as footnotes or left out, and whether hypo answers are included.
+
+- **Word (.docx)**: real Word heading styles (Heading 1 to 6 by depth, so
+  Word's navigation pane, collapsing and "Table of Contents" all work), a
+  table of contents field at the top (Word asks whether to update fields
+  when the file opens; answer Yes to fill it in), page numbers in the
+  footer, footnotes as real Word footnotes, tables as Word tables, elements
+  and exceptions as lists, notes with bold, italic, code, links and lists
+  carried over, and PNG or JPEG images embedded with their captions (other
+  formats are noted by name). Opens in Word, Pages and Google Docs.
+- **PDF**: US Letter, a contents page with page numbers for the top two
+  levels, page numbers at the bottom right, images embedded, footnotes
+  collected on a final "Sources" page. The inline formatting of notes is
+  flattened to plain text.
+- **Markdown (.md)**: headings for every node (with the numbering and the
+  node type), fields as labelled paragraphs, elements as numbered lists,
+  tables as pipe tables, hidden hypo answers as `<details>` blocks, sources
+  as footnotes (`[^1]`) or inline, your notes exactly as written, and the
+  images copied into a folder next to the file so it stands on its own.
+
+## Snapshots and history
+
+A snapshot is the whole outline (nodes, links, sources, image records) at
+one moment. One is taken **automatically** once a day when you open an
+outline that changed since the last snapshot; take one **by hand**, with a
+label, from **Views → Snapshots and history** before any big reorganisation.
+
+- The snapshots page lists every snapshot with its date, label and word
+  count. Pick any two as **A** and **B** to see them side by side with
+  nodes highlighted as added (green), removed (red), changed (amber, naming
+  the changed fields: title, notes, status, tags or a typed field) or moved
+  (blue). "Changed nodes in detail" shows the old and new value of each
+  changed field.
+- **Restore as new outline** creates a new outline of the course with the
+  snapshot's content (fresh ids, links remapped). It never overwrites the
+  current outline: compare the two, move pieces across with "Move to…",
+  and delete whichever you do not want from the course page.
+
+## Backups
+
+A backup is a zip of the database (copied through SQLite's backup API, so
+it is consistent even while the app runs) plus the uploads folder, written
+to `~/Documents/law-outlines-backups/<date-time>.zip`.
+
+- **Settings → Back up now** writes one immediately and lists the recent
+  ones.
+- One is written automatically when the app starts and the newest backup is
+  more than a day old.
+- To restore, quit the app, unzip the file, and put `outlines.db` and
+  `uploads/` into the data folder in place of the current ones (keep the
+  old ones somewhere until you have checked the result).
+
+## Network access
+
+Off by default: the app listens on this computer only (`localhost`).
+**Settings → Network access** turns on listening on all interfaces so a
+phone or laptop on the same wifi can open the app. Saving the switch writes
+`networkAccess` into `settings.json` in the data folder; the change takes
+effect the next time the app starts, and the Settings page then shows the
+"same wifi" addresses to type into the other device. There is no login, so
+anyone on that network can open and edit your outlines while it is on;
+turn it off again when you are done. The Mac app and `npm run dev` read the
+same switch.
+
+## Where files live
+
+| What | Where |
+| --- | --- |
+| Database | `~/Documents/law-outlines/outlines.db` |
+| Images and syllabus PDFs | `~/Documents/law-outlines/uploads/<course-slug>/` |
+| Launcher settings (network switch) | `~/Documents/law-outlines/settings.json` |
+| Exports | `~/Documents/law-outlines-export/` |
+| Backups | `~/Documents/law-outlines-backups/` |
+| Mac app settings (data folder) | `~/Library/Application Support/Law Outlines/settings.json` |
+| Study-app content folder (read only) | `~/Documents/law-school-for-me/content` (changeable in Settings) |
+
+`LAW_OUTLINES_DATA_DIR` moves the first three; the Mac app sets it from its
+settings file.
+
 ## Data model
 
 Everything structured is in SQLite (`outlines.db`); images and PDFs are
-files under `uploads/<course-slug>/` next to it.
+files under `uploads/<course-slug>/` next to it. The schema is created and
+migrated by `src/lib/db.ts` (`PRAGMA user_version`), with foreign keys on
+and WAL mode.
 
-- **Course**: title, slug, order, exam date, exam format notes, printed page
-  limit (optional), link to the study app's course slug (optional), syllabus
-  topics (list).
-- **Outline**: course, name ("Full", "Attack", "Midterm"), kind (full /
-  attack / scratch), numbering (legal / decimal / bullets), created,
-  is-default, options (skeleton mode, exam-mode pins), source outline (for
-  attack outlines).
-- **Node**: outline, parent (nullable), position, type (heading / rule /
+- **Course**: id, title, slug, order, exam date, exam format notes, printed
+  page limit (optional), link to the study app's course slug (optional),
+  syllabus topics (list), created.
+- **Outline**: id, course, name ("Full", "Attack", "Midterm"), kind (full /
+  attack / scratch), numbering (legal / decimal / bullets), is-default,
+  source outline (for attack outlines), options (skeleton mode, attack
+  options, exam-mode pins), created, updated.
+- **Node**: id, outline, parent (nullable), position, type (heading / rule /
   element / exception / case / statute / policy / hypo / professor-note /
   definition / table / flag / image / free), status (empty / skeleton /
   drafted / final), title, body (markdown), typed fields (JSON, see below),
-  tags, collapsed, pinned, flashcard on/off, last edited, linked study-app
-  note path, linked element index, and for attack outlines the source node
-  and a hash of its content.
-- **Link**: from node, to node, kind (see also / conflicts with / exception
-  to / modifies / applies / leads to), note.
-- **Source**: node, kind (transcript / casebook / statute / handout / other),
-  reference text, optional URL.
-- **Image**: node, file path under uploads, caption, width hint.
+  tags, collapsed, pinned, flashcard on/off, linked study-app note path,
+  linked element index and note hash, and for attack outlines the source
+  node and a hash of its content; created, updated.
+- **Link**: id, from node, to node, kind (see also / conflicts with /
+  exception to / modifies / applies / leads to), note, created.
+- **Source**: id, node, kind (transcript / casebook / statute / handout /
+  other), reference text, optional URL, position.
+- **Image**: id, node, file path under uploads, caption, width hint,
+  position, created.
 - **Syllabus**: course, PDF path, uploaded date.
-- **Snapshot**: outline, date, label, automatic flag, full JSON of the tree,
-  word count.
-- **Drill result**: node, date, mode (recite / hypo), right or wrong.
-- **Capture**: course, text, date, filed flag.
-- **Card state / card review**: SM-2 scheduling for nodes with flashcards on.
-- **Settings**: key/value (study-app content folder and so on).
+- **Snapshot**: id, outline, date, label, automatic flag, full JSON of the
+  tree (nodes, links, sources, images), word count.
+- **Drill result**: id, node, date, mode (recite / hypo), right or wrong,
+  seconds.
+- **Capture**: id, course, text, date, filed flag.
+- **Card state / card review**: SM-2 scheduling (interval, ease,
+  repetitions, due date) and the review log for nodes with flashcards on.
+- **Settings**: key/value in the database (`studyContentDir`); the launcher
+  switch (`networkAccess`) is in `settings.json` so it can be read before
+  the server starts.
 
 ### Node types and their fields
 
@@ -279,16 +520,18 @@ files under `uploads/<course-slug>/` next to it.
 | image | image title | caption (the image file is attached to the node) |
 | free | title | markdown body |
 
-Every type also has tags, a markdown notes body, and (later phases) links,
-sources and attached images.
+Every type also has tags, a markdown notes body, links, sources and
+attached images.
 
 ## Project layout
 
 ```
-electron/        Mac app shell (main.cjs, paths.cjs, server.cjs)
-scripts/         dev.mjs (launcher), package.mjs (builds the Mac app)
-src/app/         pages, server actions and API routes (Next.js App Router)
-src/components/  the editor and shared components
-src/lib/         database, tree operations, numbering, node type definitions
-tests/           unit tests (node --test)
+electron/            Mac app shell (main.cjs, paths.cjs, server.cjs)
+scripts/             dev.mjs (launcher), package.mjs (builds the Mac app)
+src/app/             pages, server actions and API routes (Next.js App Router)
+src/components/      the editor, document renderer, views and shared components
+src/lib/             database, tree operations, numbering, node types, importers,
+                     exporters, snapshots, backups
+src/instrumentation.ts  runs the automatic backup when the server starts
+tests/               unit tests (node --test)
 ```

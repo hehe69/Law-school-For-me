@@ -256,11 +256,52 @@ body {
   }
 }
 
-/* Checklist and flowchart printing: the shell disappears, the content fills the page. */
+/* Printing: the shell disappears, the content fills the page, with page numbers in the footer. */
+@page {
+  margin: 18mm 16mm 20mm;
+  @bottom-right {
+    content: counter(page);
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 9pt;
+    color: #6b7280;
+  }
+}
 @media print {
   header,
-  .print-hidden {
+  .print-hidden,
+  nextjs-portal {
     display: none !important;
+  }
+  .print-doc {
+    max-width: none;
+    padding: 0;
+    font-size: 10.5pt;
+  }
+  .print-header {
+    border-bottom: 1px solid #9ca3af;
+    padding-bottom: 6pt;
+  }
+  .print-toc {
+    break-after: page;
+  }
+  .doc-node {
+    break-inside: avoid-page;
+  }
+  .doc-title {
+    break-after: avoid-page;
+  }
+  .doc-figure img {
+    max-height: 60vh;
+  }
+  .doc-footnotes {
+    break-before: page;
+  }
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .term {
+    text-decoration: none;
   }
   .checklist-columns {
     columns: 2;

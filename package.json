@@ -15,10 +15,13 @@
   },
   "dependencies": {
     "better-sqlite3": "^13.0.3",
+    "docx": "^9.9.0",
+    "fflate": "^0.8.3",
     "gray-matter": "^4.0.3",
     "mammoth": "^1.13.0",
     "next": "16.3.8",
     "pdfjs-dist": "^6.4.299",
+    "pdfkit": "^0.20.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "react-markdown": "^10.1.0"
@@ -28,6 +31,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^9.6.0",
     "@types/node": "^22",
+    "@types/pdfkit": "^0.17.6",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "electron": "^44.5.1",
